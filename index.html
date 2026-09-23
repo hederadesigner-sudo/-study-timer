@@ -34,8 +34,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .week-title h2{font-size:19px;margin:0}
 .chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;min-height:285px;padding:8px 1px 0}
 .day{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:265px}
-.blocks{width:100%;max-width:44px;height:200px;display:flex;flex-direction:column-reverse;gap:1px;justify-content:flex-start;overflow:hidden}
-.block{width:100%;height:1px;min-height:1px;border-radius:1px;background:var(--block)}
+.blocks{width:100%;max-width:44px;height:210px;display:flex;flex-direction:column-reverse;justify-content:flex-start;overflow:hidden}
+.block{width:100%;border-radius:2px;background:var(--block);flex:0 0 auto}
 .block.partial{background:linear-gradient(to top,var(--block) var(--fill),#eef0f4 var(--fill));border:1px solid #d8dbe1}
 .day.today .blocks{outline:2px solid var(--accent-soft);outline-offset:4px;border-radius:5px}
 .minutes{font-size:10px;margin-top:8px;min-height:15px;color:var(--muted);white-space:nowrap;letter-spacing:-.02em}
@@ -74,7 +74,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       <div class="small">1ブロック＝15分</div>
     </div>
     <div class="chart" id="chart"></div>
-    <div class="legend">15分未満の途中分も、ブロックの一部として表示します。1日の表示上限は24時間（96ブロック）です。</div>
+    <div class="legend">15分未満の途中分も表示します。24時間（96ブロック）まで対応し、その週の最大時間に合わせて自動で見やすく調整します。</div>
     <div class="actions">
       <button class="secondary" id="minus15" type="button">−15分</button>
       <button class="secondary" id="plus15" type="button">＋15分</button>
@@ -90,7 +90,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 (() => {
   const KEY="study_timer_15min_v5";
   const SEEDED_DATE="2026-09-23";
-  const SEEDED_SECONDS=146*60;
+  const SEEDED_SECONDS=146*60;\n  const RECOVERED_SECONDS=358*60;
 
   const timerEl=document.getElementById("timer");
   const toggleBtn=document.getElementById("toggle");
@@ -205,11 +205,23 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     chartEl.innerHTML="";
     let weekSec=0;
     const labels=["月","火","水","木","金","土","日"];
-
-    weekDays().forEach((d,i)=>{
+    const thisWeek=weekDays();
+    const weekValues=thisWeek.map(d=>{
       const k=dateKey(d);
       let sec=Number(data.days[k]||0);
       if(data.running && data.runningDate===k) sec+=live;
+      return sec;
+    });
+
+    const maxSec=Math.max(0,...weekValues);
+    const maxBlocks=Math.min(96,Math.ceil(maxSec/900));
+    const displayBlocks=Math.max(12,maxBlocks||12);
+    const gap=displayBlocks<=24?3:(displayBlocks<=48?2:1);
+    const blockHeight=Math.max(1,Math.floor((210-gap*(displayBlocks-1))/displayBlocks));
+
+    thisWeek.forEach((d,i)=>{
+      const k=dateKey(d);
+      let sec=weekValues[i];
       weekSec+=sec;
 
       const full=Math.floor(sec/900);
@@ -220,16 +232,21 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
       const blocks=document.createElement("div");
       blocks.className="blocks";
+      blocks.style.gap=gap+"px";
 
-      const shown=Math.min(full,96);
+      const shown=Math.min(full,displayBlocks);
       for(let j=0;j<shown;j++){
         const b=document.createElement("div");
         b.className="block";
+        b.style.height=blockHeight+"px";
+        b.style.minHeight=blockHeight+"px";
         blocks.appendChild(b);
       }
-      if(rem>0 && full<96){
+      if(rem>0 && full<displayBlocks){
         const b=document.createElement("div");
         b.className="block partial";
+        b.style.height=blockHeight+"px";
+        b.style.minHeight=blockHeight+"px";
         b.style.setProperty("--fill",Math.round(rem/900*100)+"%");
         blocks.appendChild(b);
       }
