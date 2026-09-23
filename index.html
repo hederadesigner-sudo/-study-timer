@@ -32,10 +32,10 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .stat strong{display:block;font-size:21px;margin-top:4px;font-variant-numeric:tabular-nums}
 .week-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
 .week-title h2{font-size:19px;margin:0}
-.chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;min-height:330px;padding:8px 1px 0}
-.day{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:310px}
-.blocks{width:100%;max-width:44px;height:247px;display:flex;flex-direction:column-reverse;gap:3px;justify-content:flex-start}
-.block{width:100%;height:9px;min-height:9px;border-radius:3px;background:var(--block)}
+.chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;min-height:285px;padding:8px 1px 0}
+.day{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:265px}
+.blocks{width:100%;max-width:44px;height:200px;display:flex;flex-direction:column-reverse;gap:2px;justify-content:flex-start;overflow:hidden}
+.block{width:100%;height:4px;min-height:4px;border-radius:2px;background:var(--block)}
 .block.partial{background:linear-gradient(to top,var(--block) var(--fill),#eef0f4 var(--fill));border:1px solid #d8dbe1}
 .day.today .blocks{outline:2px solid var(--accent-soft);outline-offset:4px;border-radius:5px}
 .minutes{font-size:10px;margin-top:8px;min-height:15px;color:var(--muted);white-space:nowrap;letter-spacing:-.02em}
@@ -221,13 +221,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       const blocks=document.createElement("div");
       blocks.className="blocks";
 
-      const shown=Math.min(full,24);
+      const shown=Math.min(full,32);
       for(let j=0;j<shown;j++){
         const b=document.createElement("div");
         b.className="block";
         blocks.appendChild(b);
       }
-      if(rem>0 && full<24){
+      if(rem>0 && full<32){
         const b=document.createElement("div");
         b.className="block partial";
         b.style.setProperty("--fill",Math.round(rem/900*100)+"%");
