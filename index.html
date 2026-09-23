@@ -90,7 +90,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 (() => {
   const KEY="study_timer_15min_v5";
   const SEEDED_DATE="2026-09-23";
-  const SEEDED_SECONDS=146*60;\n  const RECOVERED_SECONDS=358*60;
+  const SEEDED_SECONDS=146*60;
+  const RECOVERED_SECONDS=358*60;
 
   const timerEl=document.getElementById("timer");
   const toggleBtn=document.getElementById("toggle");
@@ -110,7 +111,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   }
 
   function defaultData(){
-    return {days:{[SEEDED_DATE]:SEEDED_SECONDS}, running:false, startedAt:null, runningDate:null};
+    return {days:{[SEEDED_DATE]:RECOVERED_SECONDS}, running:false, startedAt:null, runningDate:null};
   }
 
   function load(){
@@ -123,7 +124,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       }
       const d=JSON.parse(raw);
       if(!d.days) d.days={};
-      if(typeof d.days[SEEDED_DATE]==="undefined") d.days[SEEDED_DATE]=SEEDED_SECONDS;
+      if(typeof d.days[SEEDED_DATE]==="undefined") d.days[SEEDED_DATE]=RECOVERED_SECONDS;
+      if(Number(d.days[SEEDED_DATE]||0) < RECOVERED_SECONDS) d.days[SEEDED_DATE]=RECOVERED_SECONDS;
+      localStorage.setItem(KEY,JSON.stringify(d));
       return d;
     }catch(e){
       return defaultData();
