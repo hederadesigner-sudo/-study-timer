@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f7f9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="勉強タイマー">
+<title>勉強タイマー</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --text:#172033; --muted:#717b8d;
+  --line:#e2e6ec; --accent:#5146e5; --accent-soft:#eceaff; --block:#5146e5;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; min-height:100%; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;
+}
+button{font:inherit;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:760px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 14px calc(40px + env(safe-area-inset-bottom))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:14px}
+h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-height:1.45}
+.timer{font-size:50px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:.015em;margin:18px 0 14px;text-align:center}
+.primary{width:100%;min-height:54px;border:0;border-radius:15px;background:var(--accent);color:#fff;font-size:17px;font-weight:750;cursor:pointer}
+.primary.running{background:#171c27}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:13px}
+.stat{padding:13px 10px;border:1px solid var(--line);border-radius:15px;text-align:center;min-width:0}
+.stat:last-child{grid-column:1/-1}
+.stat strong{display:block;font-size:21px;margin-top:4px;font-variant-numeric:tabular-nums}
+.week-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.week-title h2{font-size:19px;margin:0}
+.chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;min-height:330px;padding:8px 1px 0}
+.day{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:310px}
+.blocks{width:100%;max-width:44px;height:247px;display:flex;flex-direction:column-reverse;gap:3px;justify-content:flex-start}
+.block{width:100%;height:9px;min-height:9px;border-radius:3px;background:var(--block)}
+.block.partial{background:linear-gradient(to top,var(--block) var(--fill),#eef0f4 var(--fill));border:1px solid #d8dbe1}
+.day.today .blocks{outline:2px solid var(--accent-soft);outline-offset:4px;border-radius:5px}
+.minutes{font-size:10px;margin-top:8px;min-height:15px;color:var(--muted);white-space:nowrap;letter-spacing:-.02em}
+.label{margin-top:2px;font-size:12px;font-weight:700}.date{font-size:10px;color:var(--muted)}
+.legend{margin-top:10px;font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
+.actions{display:flex;gap:8px;margin-top:13px}
+.secondary{flex:1;min-height:46px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--text);font-size:14px;font-weight:650;cursor:pointer}
+.note{font-size:12px;line-height:1.65;color:var(--muted);padding:0 3px}
+.badge{display:inline-flex;align-items:center;gap:6px;margin-top:9px;padding:6px 9px;border-radius:999px;background:var(--accent-soft);font-size:12px;color:var(--text)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+@media(min-width:600px){
+  .stats{grid-template-columns:repeat(3,1fr)} .stat:last-child{grid-column:auto}
+  .blocks{max-width:56px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>勉強タイマー</h1>
+    <div class="small">「勉強開始」を押して、終わったら停止。15分ごとに今日の列が1ブロック伸びます。</div>
+    <div class="badge" id="statusBadge"><span class="dot"></span><span id="statusText">停止中</span></div>
+    <div class="timer" id="timer">00:00:00</div>
+    <button class="primary" id="toggle" type="button">▶ 勉強開始</button>
+
+    <div class="stats">
+      <div class="stat"><span class="small">今日</span><strong id="todayTotal">0分</strong></div>
+      <div class="stat"><span class="small">15分ブロック</span><strong id="blocksCount">0</strong></div>
+      <div class="stat"><span class="small">今週</span><strong id="weekTotal">0分</strong></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="week-title">
+      <h2>今週の勉強</h2>
+      <div class="small">1ブロック＝15分</div>
+    </div>
+    <div class="chart" id="chart"></div>
+    <div class="legend">15分未満の途中分も、ブロックの一部として表示します。</div>
+    <div class="actions">
+      <button class="secondary" id="minus15" type="button">−15分</button>
+      <button class="secondary" id="plus15" type="button">＋15分</button>
+    </div>
+  </div>
+
+  <div class="note">
+    記録はこの端末のSafariに保存されます。ページを閉じても、計測中なら開始時刻を保持し、次に開いたときに経過時間を反映します。
+  </div>
+</div>
+
+<script>
+(() => {
+  const KEY="study_timer_15min_v5";
+  const SEEDED_DATE="2026-09-23";
+  const SEEDED_SECONDS=146*60;
+
+  const timerEl=document.getElementById("timer");
+  const toggleBtn=document.getElementById("toggle");
+  const todayTotalEl=document.getElementById("todayTotal");
+  const blocksCountEl=document.getElementById("blocksCount");
+  const weekTotalEl=document.getElementById("weekTotal");
+  const chartEl=document.getElementById("chart");
+  const minusBtn=document.getElementById("minus15");
+  const plusBtn=document.getElementById("plus15");
+  const statusText=document.getElementById("statusText");
+
+  function dateKey(d=new Date()){
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,"0");
+    const day=String(d.getDate()).padStart(2,"0");
+    return y+"-"+m+"-"+day;
+  }
+
+  function defaultData(){
+    return {days:{[SEEDED_DATE]:SEEDED_SECONDS}, running:false, startedAt:null, runningDate:null};
+  }
+
+  function load(){
+    try{
+      const raw=localStorage.getItem(KEY);
+      if(!raw){
+        const d=defaultData();
+        localStorage.setItem(KEY,JSON.stringify(d));
+        return d;
+      }
+      const d=JSON.parse(raw);
+      if(!d.days) d.days={};
+      if(typeof d.days[SEEDED_DATE]==="undefined") d.days[SEEDED_DATE]=SEEDED_SECONDS;
+      return d;
+    }catch(e){
+      return defaultData();
+    }
+  }
+
+  function save(data){
+    try{ localStorage.setItem(KEY,JSON.stringify(data)); }catch(e){}
+  }
+
+  function fmtMin(sec){
+    const totalMin=Math.floor(Math.max(0,sec)/60);
+    if(totalMin<60) return totalMin+"分";
+    const h=Math.floor(totalMin/60),m=totalMin%60;
+    return m ? h+"時間"+m+"分" : h+"時間";
+  }
+
+  function fmtClock(sec){
+    sec=Math.max(0,Math.floor(sec));
+    const h=String(Math.floor(sec/3600)).padStart(2,"0");
+    const m=String(Math.floor((sec%3600)/60)).padStart(2,"0");
+    const s=String(sec%60).padStart(2,"0");
+    return h+":"+m+":"+s;
+  }
+
+  function currentLiveSeconds(data){
+    if(!data.running || !data.startedAt) return 0;
+    return Math.max(0,Math.floor((Date.now()-data.startedAt)/1000));
+  }
+
+  function splitRunningAcrossMidnight(data){
+    if(!data.running || !data.startedAt || !data.runningDate) return data;
+    const start=new Date(data.startedAt);
+    const now=new Date();
+    if(dateKey(start)===dateKey(now)) return data;
+
+    let cursor=new Date(start);
+    while(dateKey(cursor)!==dateKey(now)){
+      const nextMidnight=new Date(cursor.getFullYear(),cursor.getMonth(),cursor.getDate()+1);
+      const sec=Math.max(0,Math.floor((nextMidnight-cursor)/1000));
+      const k=dateKey(cursor);
+      data.days[k]=Number(data.days[k]||0)+sec;
+      cursor=nextMidnight;
+    }
+    data.startedAt=cursor.getTime();
+    data.runningDate=dateKey(cursor);
+    save(data);
+    return data;
+  }
+
+  function weekDays(){
+    const now=new Date();
+    const day=(now.getDay()+6)%7;
+    const monday=new Date(now.getFullYear(),now.getMonth(),now.getDate()-day);
+    return Array.from({length:7},(_,i)=>new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i));
+  }
+
+  function render(){
+    let data=splitRunningAcrossMidnight(load());
+    const live=currentLiveSeconds(data);
+    const today=dateKey();
+    const liveToday=data.running && data.runningDate===today ? live : 0;
+    const todaySec=Number(data.days[today]||0)+liveToday;
+
+    timerEl.textContent=fmtClock(live);
+    todayTotalEl.textContent=fmtMin(todaySec);
+    blocksCountEl.textContent=Math.floor(todaySec/900);
+
+    if(data.running){
+      toggleBtn.textContent="■ 勉強終了";
+      toggleBtn.classList.add("running");
+      statusText.textContent="計測中";
+    }else{
+      toggleBtn.textContent="▶ 勉強開始";
+      toggleBtn.classList.remove("running");
+      statusText.textContent="停止中";
+    }
+
+    chartEl.innerHTML="";
+    let weekSec=0;
+    const labels=["月","火","水","木","金","土","日"];
+
+    weekDays().forEach((d,i)=>{
+      const k=dateKey(d);
+      let sec=Number(data.days[k]||0);
+      if(data.running && data.runningDate===k) sec+=live;
+      weekSec+=sec;
+
+      const full=Math.floor(sec/900);
+      const rem=sec%900;
+
+      const dayEl=document.createElement("div");
+      dayEl.className="day"+(k===today?" today":"");
+
+      const blocks=document.createElement("div");
+      blocks.className="blocks";
+
+      const shown=Math.min(full,24);
+      for(let j=0;j<shown;j++){
+        const b=document.createElement("div");
+        b.className="block";
+        blocks.appendChild(b);
+      }
+      if(rem>0 && full<24){
+        const b=document.createElement("div");
+        b.className="block partial";
+        b.style.setProperty("--fill",Math.round(rem/900*100)+"%");
+        blocks.appendChild(b);
+      }
+
+      const minutes=document.createElement("div");
+      minutes.className="minutes";
+      minutes.textContent=sec?fmtMin(sec):"0分";
+
+      const label=document.createElement("div");
+      label.className="label";
+      label.textContent=labels[i];
+
+      const date=document.createElement("div");
+      date.className="date";
+      date.textContent=(d.getMonth()+1)+"/"+d.getDate();
+
+      dayEl.append(blocks,minutes,label,date);
+      chartEl.appendChild(dayEl);
+    });
+
+    weekTotalEl.textContent=fmtMin(weekSec);
+  }
+
+  function start(){
+    const data=load();
+    if(data.running) return;
+    data.running=true;
+    data.startedAt=Date.now();
+    data.runningDate=dateKey();
+    save(data);
+    render();
+  }
+
+  function stop(){
+    let data=splitRunningAcrossMidnight(load());
+    if(!data.running) return;
+    const sec=currentLiveSeconds(data);
+    const k=data.runningDate || dateKey();
+    data.days[k]=Number(data.days[k]||0)+sec;
+    data.running=false;
+    data.startedAt=null;
+    data.runningDate=null;
+    save(data);
+    render();
+  }
+
+  toggleBtn.addEventListener("click",()=>{
+    const data=load();
+    data.running?stop():start();
+  });
+
+  plusBtn.addEventListener("click",()=>{
+    let data=load();
+    if(data.running) stop();
+    data=load();
+    const k=dateKey();
+    data.days[k]=Number(data.days[k]||0)+900;
+    save(data);
+    render();
+  });
+
+  minusBtn.addEventListener("click",()=>{
+    let data=load();
+    if(data.running) stop();
+    data=load();
+    const k=dateKey();
+    data.days[k]=Math.max(0,Number(data.days[k]||0)-900);
+    save(data);
+    render();
+  });
+
+  render();
+  setInterval(render,500);
+})();
+</script>
+</body>
+</html>
