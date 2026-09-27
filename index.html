@@ -65,6 +65,18 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .cal-day{font-size:12px;font-weight:750;line-height:1.2}
 .cal-time{font-size:9px;color:var(--muted);margin-top:7px;line-height:1.15;text-align:center;white-space:nowrap}
 .month-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:9px;text-align:center}
+.health-title{font-size:19px;font-weight:750;margin:0 0 6px}
+.health-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field.full{grid-column:1/-1}
+.field label{font-size:12px;color:var(--muted);font-weight:700}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);font:inherit;padding:11px 10px;min-height:44px}
+.field textarea{min-height:76px;resize:vertical}
+.checkline{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:12px}
+.health-summary{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:13px;line-height:1.55}
+.health-msg{margin-top:8px;font-size:12px;color:var(--muted);min-height:18px}
+.cal-health{font-size:8px;line-height:1.2;margin-top:3px;text-align:center;color:var(--text)}
+.period-mark{font-size:8px;font-weight:750;margin-top:2px}
 .backup-title{font-size:18px;font-weight:750;margin:0 0 6px}
 .backup-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .backup-msg{margin-top:10px;font-size:12px;color:var(--muted);min-height:18px}
@@ -133,6 +145,53 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card">
+    <div class="health-title">睡眠・体調管理</div>
+    <div class="small">日付ごとに睡眠時間、体調、生理日、メモを記録できます。</div>
+
+    <div class="health-grid">
+      <div class="field full">
+        <label for="healthDate">日付</label>
+        <input id="healthDate" type="date">
+      </div>
+
+      <div class="field">
+        <label for="sleepStart">就寝</label>
+        <input id="sleepStart" type="time">
+      </div>
+      <div class="field">
+        <label for="sleepEnd">起床</label>
+        <input id="sleepEnd" type="time">
+      </div>
+
+      <div class="field">
+        <label for="condition">体調</label>
+        <select id="condition">
+          <option value="">未記録</option>
+          <option value="1">1 かなり悪い</option>
+          <option value="2">2 悪い</option>
+          <option value="3">3 普通</option>
+          <option value="4">4 良い</option>
+          <option value="5">5 とても良い</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>生理</label>
+        <label class="checkline"><input id="periodDay" type="checkbox"> 生理日</label>
+      </div>
+
+      <div class="field full">
+        <label for="healthMemo">体調メモ</label>
+        <textarea id="healthMemo" placeholder="頭痛、だるさ、気分など"></textarea>
+      </div>
+    </div>
+
+    <div class="health-summary" id="healthSummary">睡眠時間：未記録</div>
+    <button class="primary" id="saveHealth" type="button" style="margin-top:10px">記録を保存</button>
+    <div class="health-msg" id="healthMsg"></div>
+  </div>
+
+  <div class="card">
     <div class="backup-title">データのバックアップ</div>
     <div class="small">勉強記録をJSONファイルとして保存しておけば、Webアプリを削除した場合や機種変更後でも復元できます。</div>
     <div class="backup-grid">
@@ -183,6 +242,15 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const monthTotalEl=document.getElementById("monthTotal");
   const monthAdjustEl=document.getElementById("monthAdjust");
   const monthCalendarEl=document.getElementById("monthCalendar");
+  const healthDateEl=document.getElementById("healthDate");
+  const sleepStartEl=document.getElementById("sleepStart");
+  const sleepEndEl=document.getElementById("sleepEnd");
+  const conditionEl=document.getElementById("condition");
+  const periodDayEl=document.getElementById("periodDay");
+  const healthMemoEl=document.getElementById("healthMemo");
+  const healthSummaryEl=document.getElementById("healthSummary");
+  const healthMsgEl=document.getElementById("healthMsg");
+  const saveHealthBtn=document.getElementById("saveHealth");
   let selectedWeekOffset=0;
   let selectedMonthOffset=0;
 
@@ -197,6 +265,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return {
       days:{[SEEDED_DATE]:RECOVERED_SECONDS},
       weekMinimums:{[LAST_WEEK_KEY]:LAST_WEEK_MIN_SECONDS},
+      health:{},
       running:false,
       startedAt:null,
       runningDate:null
@@ -266,6 +335,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     d.days=recoverLegacyDays(d.days);
     if(!d.weekMinimums || typeof d.weekMinimums!=="object") d.weekMinimums={};
     d.weekMinimums[LAST_WEEK_KEY]=Math.max(Number(d.weekMinimums[LAST_WEEK_KEY]||0),LAST_WEEK_MIN_SECONDS);
+    if(!d.health || typeof d.health!=="object") d.health={};
     if(typeof d.running!=="boolean") d.running=false;
     if(!("startedAt" in d)) d.startedAt=null;
     if(!("runningDate" in d)) d.runningDate=null;
@@ -353,6 +423,55 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   }
 
 
+  function sleepSeconds(start,end){
+    if(!start || !end) return 0;
+    const [sh,sm]=start.split(":").map(Number);
+    const [eh,em]=end.split(":").map(Number);
+    let a=sh*60+sm, b=eh*60+em;
+    if(b<a) b+=24*60;
+    return Math.max(0,(b-a)*60);
+  }
+
+  function loadHealthForm(date){
+    const data=load();
+    const h=(data.health||{})[date]||{};
+    healthDateEl.value=date;
+    sleepStartEl.value=h.sleepStart||"";
+    sleepEndEl.value=h.sleepEnd||"";
+    conditionEl.value=h.condition?String(h.condition):"";
+    periodDayEl.checked=!!h.period;
+    healthMemoEl.value=h.memo||"";
+    updateHealthSummary();
+    healthMsgEl.textContent="";
+  }
+
+  function updateHealthSummary(){
+    const sec=sleepSeconds(sleepStartEl.value,sleepEndEl.value);
+    const parts=[];
+    parts.push("睡眠時間："+(sec?fmtMin(sec):"未記録"));
+    if(conditionEl.value) parts.push("体調："+conditionEl.options[conditionEl.selectedIndex].text);
+    if(periodDayEl.checked) parts.push("生理日");
+    healthSummaryEl.textContent=parts.join(" / ");
+  }
+
+  function saveHealthRecord(){
+    const date=healthDateEl.value||dateKey();
+    const data=load();
+    data.health=data.health||{};
+    const sec=sleepSeconds(sleepStartEl.value,sleepEndEl.value);
+    data.health[date]={
+      sleepStart:sleepStartEl.value||"",
+      sleepEnd:sleepEndEl.value||"",
+      sleepSeconds:sec,
+      condition:conditionEl.value?Number(conditionEl.value):null,
+      period:periodDayEl.checked,
+      memo:(healthMemoEl.value||"").trim()
+    };
+    save(data);
+    healthMsgEl.textContent="保存しました。";
+    render();
+  }
+
   function monthBase(offset=0){
     const now=new Date();
     return new Date(now.getFullYear(),now.getMonth()+offset,1);
@@ -413,7 +532,21 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       timeEl.className="cal-time";
       timeEl.textContent=sec?fmtMin(sec):"";
 
-      cell.append(dayEl,timeEl);
+      const h=(data.health||{})[dateKey(d)]||null;
+      const healthEl=document.createElement("div");
+      healthEl.className="cal-health";
+      if(h){
+        const bits=[];
+        if(Number(h.sleepSeconds||0)>0) bits.push("睡"+fmtMin(Number(h.sleepSeconds||0)).replace("時間","h").replace("分","m"));
+        if(h.condition) bits.push("体"+h.condition);
+        healthEl.textContent=bits.join(" ");
+      }
+
+      const periodEl=document.createElement("div");
+      periodEl.className="period-mark";
+      periodEl.textContent=h&&h.period?"生理":"";
+
+      cell.append(dayEl,timeEl,healthEl,periodEl);
       monthCalendarEl.appendChild(cell);
     }
 
@@ -429,7 +562,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       version:1,
       exportedAt:new Date().toISOString(),
       days:{...data.days},
-      weekMinimums:{...data.weekMinimums}
+      weekMinimums:{...data.weekMinimums},
+      health:{...data.health}
     };
   }
 
@@ -481,6 +615,14 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
           }
         });
       }
+      if(parsed.health && typeof parsed.health==="object"){
+        data.health=data.health||{};
+        Object.entries(parsed.health).forEach(([k,v])=>{
+          if(/^\d{4}-\d{2}-\d{2}$/.test(k) && v && typeof v==="object"){
+            data.health[k]={...(data.health[k]||{}),...v};
+          }
+        });
+      }
       save(data);
       backupMsg.textContent="バックアップを復元しました。";
       render();
@@ -523,6 +665,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     }
 
     renderMonthCalendar(data,live,today);
+    if(!healthDateEl.value) loadHealthForm(today);
 
     if(data.running){
       toggleBtn.textContent="■ 勉強終了";
@@ -673,6 +816,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     if(selectedMonthOffset<0) selectedMonthOffset+=1;
     render();
   });
+
+  healthDateEl.addEventListener("change",()=>loadHealthForm(healthDateEl.value||dateKey()));
+  sleepStartEl.addEventListener("input",updateHealthSummary);
+  sleepEndEl.addEventListener("input",updateHealthSummary);
+  conditionEl.addEventListener("change",updateHealthSummary);
+  periodDayEl.addEventListener("change",updateHealthSummary);
+  saveHealthBtn.addEventListener("click",saveHealthRecord);
 
   backupBtn.addEventListener("click",saveBackupFile);
   restoreBtn.addEventListener("click",()=>restoreInput.click());
