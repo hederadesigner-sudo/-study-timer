@@ -91,28 +91,28 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .note{font-size:12px;line-height:1.65;color:var(--muted);padding:0 3px}
 .month-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
 .month-title h2{font-size:19px;margin:0}
-.month-nav{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center;margin-bottom:8px}
-.month-nav button{min-height:40px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);font-size:20px;font-weight:700;cursor:pointer}
-.month-nav button:disabled{opacity:.3;cursor:default}
-.month-label{text-align:center;font-size:15px;font-weight:750}
-.month-total{text-align:center;font-size:14px;font-weight:750;margin:4px 0 2px}
-.month-adjust{text-align:center;font-size:11px;color:var(--muted);min-height:16px;margin-bottom:8px}
-.calendar-head,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
-.calendar-head div{text-align:center;font-size:11px;color:var(--muted);font-weight:700;padding:4px 0}
-.cal-cell{position:relative;min-width:0;min-height:58px;border:1px solid var(--line);border-radius:10px;padding:6px 3px 12px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s}
-.cal-cell.empty{border-color:transparent;background:transparent}
-.cal-cell.has-study{background:var(--accent-soft);border-color:#d8d4ff}
-.cal-cell.condition-bad{background:#fff0f1;border-color:#f0a8ae}
-.cal-cell.condition-bad.has-study{background:linear-gradient(135deg,#fff0f1 0 52%,var(--accent-soft) 52% 100%)}
-.cal-cell.today{outline:none!important;background:#fff3df!important;border-color:#efb45e!important}
-.cal-cell.selected{box-shadow:0 0 0 2px var(--accent) inset}
-.cal-cell.today.selected{box-shadow:none}
-.period-strip{position:absolute;bottom:4px;left:-3px;right:-3px;height:5px;background:#ef7aa5;z-index:2}
-.period-strip.start{left:6px;border-radius:999px 0 0 999px}
-.period-strip.end{right:6px;border-radius:0 999px 999px 0}
-.period-strip.start.end{left:6px;right:6px;border-radius:999px}
-.cal-day{font-size:12px;font-weight:750;line-height:1.2}
-.cal-time{font-size:9px;color:var(--muted);margin-top:7px;line-height:1.15;text-align:center;white-space:nowrap}
+.month-nav{display:grid;grid-template-columns:40px 1fr 40px;gap:6px;align-items:center;margin-bottom:6px}
+.month-nav button{width:40px;height:40px;min-height:40px;border:0;border-radius:50%;background:transparent;color:var(--accent);font-size:24px;font-weight:700;cursor:pointer;padding:0}
+.month-nav button:disabled{opacity:.22;cursor:default}
+.month-label{text-align:center;font-size:17px;font-weight:800}
+.month-total{text-align:center;font-size:13px;font-weight:700;margin:2px 0 1px}
+.month-adjust{text-align:center;font-size:10px;color:var(--muted);min-height:14px;margin-bottom:5px}
+.calendar-head,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0}
+.calendar-head{border-bottom:1px solid #eceff3;margin-top:6px}
+.calendar-head div{text-align:center;font-size:11px;color:var(--muted);font-weight:650;padding:6px 0 8px}
+.cal-cell{position:relative;min-width:0;min-height:72px;border:0;border-radius:0;padding:7px 2px 13px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;cursor:pointer;transition:background .15s}
+.cal-cell.empty{background:transparent}
+.cal-cell::after{content:"";position:absolute;left:7px;right:7px;bottom:0;height:1px;background:#f1f2f5}
+.cal-cell.empty::after{display:none}
+.cal-day{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;line-height:1;color:var(--text)}
+.cal-cell.today .cal-day{background:#ff9f0a;color:#fff}
+.cal-cell.selected:not(.today) .cal-day{background:var(--accent);color:#fff}
+.cal-cell.condition-bad:not(.today):not(.selected) .cal-day{box-shadow:0 0 0 2px #ef8f98 inset;color:#c84a55}
+.cal-time{font-size:9px;color:var(--accent);margin-top:5px;line-height:1.1;text-align:center;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.cal-health{font-size:8px;line-height:1.1;margin-top:3px;text-align:center;color:var(--muted)}
+.cal-cell.condition-bad .cal-health{color:#c84a55;font-weight:700}
+.period-strip{position:absolute;left:4px;right:4px;bottom:5px;height:5px;border-radius:999px;background:#ef7aa5;z-index:2}
+.period-strip.start,.period-strip.end,.period-strip.start.end{left:4px;right:4px;border-radius:999px}
 .month-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:9px;text-align:center}
 .health-title{font-size:19px;font-weight:750;margin:0 0 6px}
 .health-grid{display:flex;flex-direction:column;gap:12px;margin-top:14px;width:100%}
@@ -228,11 +228,11 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       <div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div><div>日</div>
     </div>
     <div class="calendar-grid" id="monthCalendar"></div>
-    <div class="month-note">日付をタップすると、その日の生活時間・体調記録を表示します。今日の日付はオレンジ、体調1〜2の日は赤系、生理期間はピンクの横棒で表示します。</div>
+    <div class="month-note">日付をタップすると、その日の生活時間・体調記録を表示します。今日＝オレンジ、選択日＝紫、体調不良＝赤、生理期間＝ピンクのバーです。</div>
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v8</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v9</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。計測中は円グラフ・合計時間・タイムラインがリアルタイムで更新されます。</div>
 
     <div class="life-controls">
