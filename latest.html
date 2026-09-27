@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="勉強タイマー">
 <title>勉強タイマー</title>
-<meta name="build" content="2026-09-28-24h-fix">
+<meta name="build" content="2026-09-28-month-calendar">
 <style>
 :root{
   --bg:#f6f7f9; --card:#ffffff; --text:#172033; --muted:#717b8d;
@@ -49,6 +49,23 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .actions{display:flex;gap:8px;margin-top:13px}
 .secondary{flex:1;min-height:46px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--text);font-size:14px;font-weight:650;cursor:pointer}
 .note{font-size:12px;line-height:1.65;color:var(--muted);padding:0 3px}
+.month-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+.month-title h2{font-size:19px;margin:0}
+.month-nav{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center;margin-bottom:8px}
+.month-nav button{min-height:40px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);font-size:20px;font-weight:700;cursor:pointer}
+.month-nav button:disabled{opacity:.3;cursor:default}
+.month-label{text-align:center;font-size:15px;font-weight:750}
+.month-total{text-align:center;font-size:14px;font-weight:750;margin:4px 0 2px}
+.month-adjust{text-align:center;font-size:11px;color:var(--muted);min-height:16px;margin-bottom:8px}
+.calendar-head,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.calendar-head div{text-align:center;font-size:11px;color:var(--muted);font-weight:700;padding:4px 0}
+.cal-cell{min-width:0;min-height:58px;border:1px solid var(--line);border-radius:10px;padding:6px 3px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+.cal-cell.empty{border-color:transparent;background:transparent}
+.cal-cell.today{outline:2px solid var(--accent);outline-offset:1px}
+.cal-cell.has-study{background:var(--accent-soft);border-color:#d8d4ff}
+.cal-day{font-size:12px;font-weight:750;line-height:1.2}
+.cal-time{font-size:9px;color:var(--muted);margin-top:7px;line-height:1.15;text-align:center;white-space:nowrap}
+.month-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:9px;text-align:center}
 .backup-title{font-size:18px;font-weight:750;margin:0 0 6px}
 .backup-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .backup-msg{margin-top:10px;font-size:12px;color:var(--muted);min-height:18px}
@@ -98,6 +115,25 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card">
+    <div class="month-title">
+      <h2>月ごとの勉強</h2>
+      <div class="small">日別カレンダー</div>
+    </div>
+    <div class="month-nav">
+      <button id="prevMonth" type="button" aria-label="前の月">‹</button>
+      <div class="month-label" id="monthLabel">-</div>
+      <button id="nextMonth" type="button" aria-label="次の月">›</button>
+    </div>
+    <div class="month-total" id="monthTotal">この月：0分</div>
+    <div class="month-adjust" id="monthAdjust"></div>
+    <div class="calendar-head">
+      <div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div><div>日</div>
+    </div>
+    <div class="calendar-grid" id="monthCalendar"></div>
+    <div class="month-note">各日には実際に保存されている時間を表示します。日別の内訳が不明な補正時間は、月合計にのみ反映します。</div>
+  </div>
+
+  <div class="card">
     <div class="backup-title">データのバックアップ</div>
     <div class="small">勉強記録をJSONファイルとして保存しておけば、Webアプリを削除した場合や機種変更後でも復元できます。</div>
     <div class="backup-grid">
@@ -142,7 +178,14 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const restoreBtn=document.getElementById("restoreBtn");
   const restoreInput=document.getElementById("restoreInput");
   const backupMsg=document.getElementById("backupMsg");
+  const prevMonthBtn=document.getElementById("prevMonth");
+  const nextMonthBtn=document.getElementById("nextMonth");
+  const monthLabelEl=document.getElementById("monthLabel");
+  const monthTotalEl=document.getElementById("monthTotal");
+  const monthAdjustEl=document.getElementById("monthAdjust");
+  const monthCalendarEl=document.getElementById("monthCalendar");
   let selectedWeekOffset=0;
+  let selectedMonthOffset=0;
 
   function dateKey(d=new Date()){
     const y=d.getFullYear();
@@ -311,6 +354,75 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   }
 
 
+  function monthBase(offset=0){
+    const now=new Date();
+    return new Date(now.getFullYear(),now.getMonth()+offset,1);
+  }
+
+  function monthDaySeconds(data,d,live){
+    const k=dateKey(d);
+    let sec=Number(data.days[k]||0);
+    if(data.running && data.runningDate===k) sec+=live;
+    return sec;
+  }
+
+  function monthAdjustmentSeconds(data,year,month,live){
+    let adjustment=0;
+    Object.entries(data.weekMinimums||{}).forEach(([mondayKey,minSec])=>{
+      const p=mondayKey.split("-").map(Number);
+      if(p.length!==3) return;
+      const monday=new Date(p[0],p[1]-1,p[2]);
+      const days=Array.from({length:7},(_,i)=>new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i));
+      const fullyInside=days.every(d=>d.getFullYear()===year && d.getMonth()===month);
+      if(!fullyInside) return;
+      const actual=actualWeekSeconds(data,days,live);
+      adjustment+=Math.max(0,Number(minSec||0)-actual);
+    });
+    return adjustment;
+  }
+
+  function renderMonthCalendar(data,live,today){
+    const base=monthBase(selectedMonthOffset);
+    const year=base.getFullYear(), month=base.getMonth();
+    monthLabelEl.textContent=year+"年"+(month+1)+"月";
+    nextMonthBtn.disabled=selectedMonthOffset>=0;
+    monthCalendarEl.innerHTML="";
+
+    const firstDay=(base.getDay()+6)%7;
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    let actualMonthSec=0;
+
+    for(let i=0;i<firstDay;i++){
+      const empty=document.createElement("div");
+      empty.className="cal-cell empty";
+      monthCalendarEl.appendChild(empty);
+    }
+
+    for(let day=1;day<=daysInMonth;day++){
+      const d=new Date(year,month,day);
+      const sec=monthDaySeconds(data,d,live);
+      actualMonthSec+=sec;
+
+      const cell=document.createElement("div");
+      cell.className="cal-cell"+(sec>0?" has-study":"")+(dateKey(d)===today?" today":"");
+
+      const dayEl=document.createElement("div");
+      dayEl.className="cal-day";
+      dayEl.textContent=day;
+
+      const timeEl=document.createElement("div");
+      timeEl.className="cal-time";
+      timeEl.textContent=sec?fmtMin(sec):"";
+
+      cell.append(dayEl,timeEl);
+      monthCalendarEl.appendChild(cell);
+    }
+
+    const adjustment=monthAdjustmentSeconds(data,year,month,live);
+    monthTotalEl.textContent="この月："+fmtMin(actualMonthSec+adjustment);
+    monthAdjustEl.textContent=adjustment>0?"週補正 ＋"+fmtMin(adjustment)+"を含む":"";
+  }
+
   function buildBackup(){
     const data=load();
     return {
@@ -410,6 +522,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       const dayCount=Object.keys(data.days).filter(k=>Number(data.days[k]||0)>0).length;
       recoveryStatusEl.textContent="保存済み記録："+dayCount+"日分";
     }
+
+    renderMonthCalendar(data,live,today);
 
     if(data.running){
       toggleBtn.textContent="■ 勉強終了";
@@ -548,6 +662,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
   nextWeekBtn.addEventListener("click",()=>{
     if(selectedWeekOffset<0) selectedWeekOffset+=1;
+    render();
+  });
+
+  prevMonthBtn.addEventListener("click",()=>{
+    selectedMonthOffset-=1;
+    render();
+  });
+
+  nextMonthBtn.addEventListener("click",()=>{
+    if(selectedMonthOffset<0) selectedMonthOffset+=1;
     render();
   });
 
