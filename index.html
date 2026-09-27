@@ -257,6 +257,15 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .manual-entry summary::-webkit-details-marker{display:none}
 .manual-entry[open] summary{margin-bottom:12px}
 .manual-body{display:flex;flex-direction:column;gap:12px}
+.session-editor{display:flex;flex-direction:column;gap:10px}
+.session-empty{padding:12px 4px;font-size:13px;color:var(--muted);text-align:center}
+.session-row{border:1px solid #d8dee8;border-radius:var(--control-radius);padding:12px;background:#fff}
+.session-row-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.session-row .life-field select,.session-row .life-field input{height:48px;min-height:48px}
+.session-row-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.session-row-actions button{height:46px;min-height:46px}
+.session-delete{color:#b42318;border-color:#f3c7c2}
+@media(max-width:430px){.session-row-grid{grid-template-columns:1fr 1fr}}
 .cloud-title{font-size:18px;font-weight:750;margin:0 0 6px}
 .cloud-grid{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .cloud-grid input{
@@ -386,6 +395,14 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
           </div>
           <button class="secondary" id="addLifeManual" type="button">この時間を追加</button>
           <div class="small">計測ボタンを押し忘れたときだけ使います。</div>
+        </div>
+      </details>
+
+      <details class="manual-entry">
+        <summary>過去の記録を修正・削除</summary>
+        <div class="manual-body">
+          <div class="small">表示中の日付に保存されている睡眠・食事・休憩・お出かけ・その他の時間を修正できます。</div>
+          <div id="lifeSessionEditor" class="session-editor"></div>
         </div>
       </details>
       <div class="life-msg" id="lifeMsg"></div>
@@ -559,6 +576,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const lifePieEl=document.getElementById("lifePie");
   const lifeLegendEl=document.getElementById("lifeLegend");
   const lifeTimelineEl=document.getElementById("lifeTimeline");
+  const lifeSessionEditorEl=document.getElementById("lifeSessionEditor");
   const sleepTotalEl=document.getElementById("sleepTotal");
   const liveActivityStatusEl=document.getElementById("liveActivityStatus");
   const cloudSignedOutEl=document.getElementById("cloudSignedOut");
@@ -620,6 +638,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       periodMigrationDone:true,
       periodRangesUpdatedAt:0,
       activitySessions:[],
+      deletedActivitySessionIds:[],
       activityRunning:null,
       running:false,
       startedAt:null,
@@ -671,16 +690,18 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     }
     merged.periodMigrationDone=true;
 
+    const deletedIds=new Set([...(remote.deletedActivitySessionIds||[]),...(local.deletedActivitySessionIds||[])]);
     const sessions=[];
     const seen=new Set();
     [...(remote.activitySessions||[]),...(local.activitySessions||[])].forEach(x=>{
       if(!x||typeof x!=="object") return;
       const id=x.id||[x.date,x.category,x.start,x.end].join("|");
-      if(seen.has(id)) return;
+      if(deletedIds.has(id)||seen.has(id)) return;
       seen.add(id);
       sessions.push(x);
     });
     merged.activitySessions=sessions;
+    merged.deletedActivitySessionIds=[...deletedIds];
 
     if(local.running){
       merged.running=true;
@@ -756,6 +777,11 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     }
     if(!Number.isFinite(Number(d.periodRangesUpdatedAt))) d.periodRangesUpdatedAt=0;
     if(!Array.isArray(d.activitySessions)) d.activitySessions=[];
+    if(!Array.isArray(d.deletedActivitySessionIds)) d.deletedActivitySessionIds=[];
+    if(d.deletedActivitySessionIds.length){
+      const deleted=new Set(d.deletedActivitySessionIds);
+      d.activitySessions=d.activitySessions.filter(x=>x&&x.id&&!deleted.has(x.id));
+    }
     if(!("activityRunning" in d)) d.activityRunning=null;
     if(typeof d.running!=="boolean") d.running=false;
     if(!("startedAt" in d)) d.startedAt=null;
@@ -1091,6 +1117,124 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return data;
   }
 
+  function timeValueFromMs(ms){
+    const d=new Date(Number(ms));
+    return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  }
+
+  function deleteActivitySession(data,id){
+    data.deletedActivitySessionIds=data.deletedActivitySessionIds||[];
+    if(!data.deletedActivitySessionIds.includes(id)) data.deletedActivitySessionIds.push(id);
+    data.activitySessions=(data.activitySessions||[]).filter(x=>x.id!==id);
+  }
+
+  function renderLifeSessionEditor(data,date){
+    if(!lifeSessionEditorEl) return;
+    lifeSessionEditorEl.innerHTML="";
+    const sessions=(data.activitySessions||[])
+      .filter(x=>x&&x.date===date&&x.category!=="study")
+      .sort((a,b)=>Number(a.start||0)-Number(b.start||0));
+
+    if(!sessions.length){
+      const empty=document.createElement("div");
+      empty.className="session-empty";
+      empty.textContent="この日の修正できる記録はありません。";
+      lifeSessionEditorEl.appendChild(empty);
+      return;
+    }
+
+    sessions.forEach(session=>{
+      const row=document.createElement("div");
+      row.className="session-row";
+
+      const grid=document.createElement("div");
+      grid.className="session-row-grid";
+
+      const catField=document.createElement("div");
+      catField.className="life-field";
+      const catLabel=document.createElement("label");
+      catLabel.textContent="活動";
+      const cat=document.createElement("select");
+      ["sleep","meal","break","outing","other"].forEach(k=>{
+        const op=document.createElement("option");
+        op.value=k;
+        op.textContent=ACTIVITY_META[k].label;
+        op.selected=session.category===k;
+        cat.appendChild(op);
+      });
+      catField.append(catLabel,cat);
+
+      const spacer=document.createElement("div");
+      spacer.className="life-field";
+      const durationLabel=document.createElement("label");
+      durationLabel.textContent="現在の記録";
+      const duration=document.createElement("div");
+      duration.className="small";
+      duration.style.padding="14px 2px";
+      duration.textContent=fmtMin(Math.max(0,(Number(session.end||0)-Number(session.start||0))/1000));
+      spacer.append(durationLabel,duration);
+
+      const startField=document.createElement("div");
+      startField.className="life-field";
+      const startLabel=document.createElement("label");
+      startLabel.textContent="開始";
+      const startInput=document.createElement("input");
+      startInput.type="time";
+      startInput.value=timeValueFromMs(session.start);
+      startField.append(startLabel,startInput);
+
+      const endField=document.createElement("div");
+      endField.className="life-field";
+      const endLabel=document.createElement("label");
+      endLabel.textContent="終了";
+      const endInput=document.createElement("input");
+      endInput.type="time";
+      endInput.value=timeValueFromMs(session.end);
+      endField.append(endLabel,endInput);
+
+      grid.append(catField,spacer,startField,endField);
+
+      const actions=document.createElement("div");
+      actions.className="session-row-actions";
+      const saveBtn=document.createElement("button");
+      saveBtn.type="button";
+      saveBtn.className="secondary";
+      saveBtn.textContent="修正を保存";
+      const deleteBtn=document.createElement("button");
+      deleteBtn.type="button";
+      deleteBtn.className="secondary session-delete";
+      deleteBtn.textContent="削除";
+
+      saveBtn.addEventListener("click",()=>{
+        const start=msForDateAndTime(date,startInput.value);
+        let end=msForDateAndTime(date,endInput.value);
+        if(!Number.isFinite(start)||!Number.isFinite(end)){
+          lifeMsgEl.textContent="開始時刻と終了時刻を入力してください。";
+          return;
+        }
+        if(end<=start) end+=86400000;
+        const next=load();
+        deleteActivitySession(next,session.id);
+        pushActivitySegment(next,cat.value,start,end,"manual-edit");
+        save(next);
+        lifeMsgEl.textContent=ACTIVITY_META[cat.value].label+"の時間を修正しました。";
+        render();
+      });
+
+      deleteBtn.addEventListener("click",()=>{
+        const next=load();
+        deleteActivitySession(next,session.id);
+        save(next);
+        lifeMsgEl.textContent=ACTIVITY_META[session.category].label+"の記録を削除しました。";
+        render();
+      });
+
+      actions.append(saveBtn,deleteBtn);
+      row.append(grid,actions);
+      lifeSessionEditorEl.appendChild(row);
+    });
+  }
+
   function addManualLife(){
     const date=selectedLifeDate();
     const start=msForDateAndTime(date,lifeStartEl.value);
@@ -1165,6 +1309,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const known=Object.values(vals).reduce((a,b)=>a+b,0);
     vals.untracked=Math.max(0,86400-known);
     sleepTotalEl.textContent="睡眠 合計："+fmtMin(vals.sleep);
+    renderLifeSessionEditor(data,date);
 
     let activeLabel="未計測";
     let activeElapsed=0;
