@@ -28,10 +28,14 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .primary.running{background:#171c27}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:13px}
 .stat{padding:13px 10px;border:1px solid var(--line);border-radius:15px;text-align:center;min-width:0}
-.stat:last-child{grid-column:1/-1}
 .stat strong{display:block;font-size:21px;margin-top:4px;font-variant-numeric:tabular-nums}
 .week-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
 .week-title h2{font-size:19px;margin:0}
+.week-nav{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center;margin:4px 0 4px}
+.week-nav button{min-height:40px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);font-size:20px;font-weight:700;cursor:pointer}
+.week-nav button:disabled{opacity:.3;cursor:default}
+.week-range{text-align:center;font-size:14px;font-weight:700}
+.week-sum{text-align:center;font-size:13px;color:var(--muted);margin:7px 0 2px}
 .chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;min-height:285px;padding:8px 1px 0}
 .day{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:265px}
 .blocks{width:100%;max-width:44px;height:210px;display:flex;flex-direction:column-reverse;justify-content:flex-start;overflow:hidden}
@@ -47,7 +51,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .badge{display:inline-flex;align-items:center;gap:6px;margin-top:9px;padding:6px 9px;border-radius:999px;background:var(--accent-soft);font-size:12px;color:var(--text)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
 @media(min-width:600px){
-  .stats{grid-template-columns:repeat(3,1fr)} .stat:last-child{grid-column:auto}
+  .stats{grid-template-columns:repeat(4,1fr)}
   .blocks{max-width:56px}
 }
 </style>
@@ -63,16 +67,23 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
     <div class="stats">
       <div class="stat"><span class="small">今日</span><strong id="todayTotal">0分</strong></div>
-      <div class="stat"><span class="small">15分ブロック</span><strong id="blocksCount">0</strong></div>
       <div class="stat"><span class="small">今週</span><strong id="weekTotal">0分</strong></div>
+      <div class="stat"><span class="small">総勉強時間</span><strong id="allTimeTotal">0分</strong></div>
+      <div class="stat"><span class="small">今日の15分ブロック</span><strong id="blocksCount">0</strong></div>
     </div>
   </div>
 
   <div class="card">
     <div class="week-title">
-      <h2>今週の勉強</h2>
+      <h2>週ごとの勉強</h2>
       <div class="small">1ブロック＝15分</div>
     </div>
+    <div class="week-nav">
+      <button id="prevWeek" type="button" aria-label="前の週">‹</button>
+      <div class="week-range" id="weekRange">-</div>
+      <button id="nextWeek" type="button" aria-label="次の週">›</button>
+    </div>
+    <div class="week-sum" id="selectedWeekTotal">この週：0分</div>
     <div class="chart" id="chart"></div>
     <div class="legend">15分未満の途中分も表示します。24時間（96ブロック）まで対応し、その週の最大時間に合わせて自動で見やすく調整します。</div>
     <div class="actions">
@@ -98,10 +109,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const todayTotalEl=document.getElementById("todayTotal");
   const blocksCountEl=document.getElementById("blocksCount");
   const weekTotalEl=document.getElementById("weekTotal");
+  const allTimeTotalEl=document.getElementById("allTimeTotal");
+  const weekRangeEl=document.getElementById("weekRange");
+  const selectedWeekTotalEl=document.getElementById("selectedWeekTotal");
+  const prevWeekBtn=document.getElementById("prevWeek");
+  const nextWeekBtn=document.getElementById("nextWeek");
   const chartEl=document.getElementById("chart");
   const minusBtn=document.getElementById("minus15");
   const plusBtn=document.getElementById("plus15");
   const statusText=document.getElementById("statusText");
+  let selectedWeekOffset=0;
 
   function dateKey(d=new Date()){
     const y=d.getFullYear();
@@ -177,11 +194,19 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return data;
   }
 
-  function weekDays(){
+  function weekDays(offset=0){
     const now=new Date();
     const day=(now.getDay()+6)%7;
-    const monday=new Date(now.getFullYear(),now.getMonth(),now.getDate()-day);
+    const monday=new Date(now.getFullYear(),now.getMonth(),now.getDate()-day+(offset*7));
     return Array.from({length:7},(_,i)=>new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i));
+  }
+
+  function weekRangeLabel(days){
+    const a=days[0], b=days[6];
+    const sameYear=a.getFullYear()===b.getFullYear();
+    const start=sameYear ? (a.getMonth()+1)+"/"+a.getDate() : a.getFullYear()+"/"+(a.getMonth()+1)+"/"+a.getDate();
+    const end=(b.getMonth()+1)+"/"+b.getDate();
+    return start+"〜"+end;
   }
 
   function render(){
@@ -194,6 +219,18 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     timerEl.textContent=fmtClock(live);
     todayTotalEl.textContent=fmtMin(todaySec);
     blocksCountEl.textContent=Math.floor(todaySec/900);
+
+    const currentWeek=weekDays(0);
+    const currentWeekSec=currentWeek.reduce((sum,d)=>{
+      const k=dateKey(d);
+      let sec=Number(data.days[k]||0);
+      if(data.running && data.runningDate===k) sec+=live;
+      return sum+sec;
+    },0);
+    weekTotalEl.textContent=fmtMin(currentWeekSec);
+
+    const savedTotalSec=Object.values(data.days).reduce((sum,v)=>sum+Number(v||0),0);
+    allTimeTotalEl.textContent=fmtMin(savedTotalSec+live);
 
     if(data.running){
       toggleBtn.textContent="■ 勉強終了";
@@ -208,7 +245,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     chartEl.innerHTML="";
     let weekSec=0;
     const labels=["月","火","水","木","金","土","日"];
-    const thisWeek=weekDays();
+    const thisWeek=weekDays(selectedWeekOffset);
+    weekRangeEl.textContent=weekRangeLabel(thisWeek);
+    nextWeekBtn.disabled=selectedWeekOffset>=0;
     const weekValues=thisWeek.map(d=>{
       const k=dateKey(d);
       let sec=Number(data.days[k]||0);
@@ -270,7 +309,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       chartEl.appendChild(dayEl);
     });
 
-    weekTotalEl.textContent=fmtMin(weekSec);
+    selectedWeekTotalEl.textContent="この週："+fmtMin(weekSec);
   }
 
   function start(){
@@ -318,6 +357,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const k=dateKey();
     data.days[k]=Math.max(0,Number(data.days[k]||0)-900);
     save(data);
+    render();
+  });
+
+  prevWeekBtn.addEventListener("click",()=>{
+    selectedWeekOffset-=1;
+    render();
+  });
+
+  nextWeekBtn.addEventListener("click",()=>{
+    if(selectedWeekOffset<0) selectedWeekOffset+=1;
     render();
   });
 
