@@ -94,7 +94,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .sleep-total{margin-top:12px;width:100%;height:var(--control-h);min-height:var(--control-h);padding:0 14px;border-radius:var(--control-radius);background:#eef5ff;font-size:14px;font-weight:750;display:flex;align-items:center;justify-content:center;text-align:center}
 .pie-wrap{display:flex;flex-direction:column;gap:16px;align-items:center;margin-top:14px;width:100%}
 .pie{width:180px;height:180px;border-radius:50%;background:#eef0f4;position:relative;box-shadow:inset 0 0 0 1px var(--line);flex:0 0 auto}
-.pie::after{content:attr(data-center);white-space:pre-line;position:absolute;inset:36px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;text-align:center;font-size:15px;line-height:1.35;font-weight:800;color:var(--text);box-shadow:0 0 0 1px var(--line);padding:8px}
+.pie::after{content:attr(data-center);white-space:nowrap;position:absolute;inset:36px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;text-align:center;font-size:24px;line-height:1;font-weight:800;color:var(--text);box-shadow:0 0 0 1px var(--line);padding:8px;font-variant-numeric:tabular-nums}
 .pie-legend{display:flex;flex-direction:column;gap:9px;min-width:0;width:100%}
 .pie-item{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:9px;align-items:center;font-size:13px;min-width:0;padding:2px 0}
 .pie-dot{width:10px;height:10px;border-radius:50%}
@@ -110,7 +110,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 @media(max-width:430px){
   .card{padding:16px}
   .pie{width:164px;height:164px}
-  .pie::after{inset:33px;font-size:14px}
+  .pie::after{inset:33px;font-size:22px}
   .timeline-row{grid-template-columns:42px minmax(0,1fr)}
   .timeline-scale{margin-left:48px}
 }
@@ -182,7 +182,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card">
-    <div class="life-title">1日の生活時間</div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v4</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。計測中は円グラフ・合計時間・タイムラインがリアルタイムで更新されます。</div>
 
     <div class="life-controls">
@@ -659,9 +659,10 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     liveActivityStatusEl.textContent=activeElapsed>0
       ? "現在："+activeLabel+" "+fmtClock(activeElapsed)
       : "現在：未計測";
-    lifePieEl.setAttribute("data-center",activeElapsed>0
-      ? activeLabel+"\n"+fmtClock(activeElapsed)
-      : "1日の\n記録");
+    const nowClock=new Date();
+    const hh=String(nowClock.getHours()).padStart(2,"0");
+    const mm=String(nowClock.getMinutes()).padStart(2,"0");
+    lifePieEl.setAttribute("data-center",hh+":"+mm);
 
     const order=["study","sleep","meal","break","outing","other","untracked"];
     const totalForPie=order.reduce((sum,k)=>sum+vals[k],0)||86400;
