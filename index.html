@@ -195,6 +195,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
           <select id="lifeCategory">
             <option value="sleep">睡眠</option>
             <option value="meal">食事</option>
+            <option value="break">休憩</option>
             <option value="outing">お出かけ</option>
             <option value="other">その他</option>
           </select>
@@ -518,6 +519,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     study:{label:"勉強",color:"#5146e5"},
     sleep:{label:"睡眠",color:"#4f8df5"},
     meal:{label:"食事",color:"#f2a65a"},
+    break:{label:"休憩",color:"#d58be8"},
     outing:{label:"お出かけ",color:"#53b788"},
     other:{label:"その他",color:"#9aa1ad"},
     untracked:{label:"未記録",color:"#eef0f4"}
@@ -632,6 +634,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       study:studySecondsForLifeDate(data,date),
       sleep:activitySecondsForDate(data,date,"sleep"),
       meal:activitySecondsForDate(data,date,"meal"),
+      break:activitySecondsForDate(data,date,"break"),
       outing:activitySecondsForDate(data,date,"outing"),
       other:activitySecondsForDate(data,date,"other")
     };
@@ -639,7 +642,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     vals.untracked=Math.max(0,86400-known);
     sleepTotalEl.textContent="睡眠 合計："+fmtMin(vals.sleep);
 
-    const order=["study","sleep","meal","outing","other","untracked"];
+    const order=["study","sleep","meal","break","outing","other","untracked"];
     const totalForPie=order.reduce((sum,k)=>sum+vals[k],0)||86400;
     let acc=0;
     const stops=[];
@@ -668,7 +671,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     });
 
     lifeTimelineEl.innerHTML="";
-    ["study","sleep","meal","outing","other"].forEach(category=>{
+    ["study","sleep","meal","break","outing","other"].forEach(category=>{
       const row=document.createElement("div");
       row.className="timeline-row";
       const name=document.createElement("div");
