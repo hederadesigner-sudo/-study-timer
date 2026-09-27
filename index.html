@@ -19,7 +19,15 @@
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-input,select,textarea,button{max-width:100%}
+input,select,textarea,button{max-width:100%;font-family:inherit}
+input[type="date"],input[type="time"],select{-webkit-appearance:none;appearance:none;background-color:#fff;font-size:16px;line-height:1}
+select{
+  background-image:linear-gradient(45deg,transparent 50%,#172033 50%),linear-gradient(135deg,#172033 50%,transparent 50%);
+  background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;
+  background-size:6px 6px,6px 6px;
+  background-repeat:no-repeat;
+  padding-right:42px!important
+}
 body{
   margin:0; min-height:100%; background:var(--bg); color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;
@@ -51,7 +59,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .label{margin-top:2px;font-size:12px;font-weight:700}.date{font-size:10px;color:var(--muted)}
 .legend{margin-top:10px;font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
 .actions{display:flex;gap:8px;margin-top:13px}
-.secondary{display:flex;align-items:center;justify-content:center;width:100%;height:var(--control-h);min-height:var(--control-h);border:1px solid var(--line);border-radius:var(--control-radius);background:#fff;color:var(--text);font-size:14px;font-weight:700;cursor:pointer;padding:0 14px}
+.secondary{display:flex;align-items:center;justify-content:center;width:100%;height:var(--control-h);min-height:var(--control-h);border:1px solid #d8dee8;border-radius:var(--control-radius);background:#fff;color:var(--text);font-size:14px;font-weight:700;cursor:pointer;padding:0 16px;box-shadow:none}
 .note{font-size:12px;line-height:1.65;color:var(--muted);padding:0 3px}
 .month-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
 .month-title h2{font-size:19px;margin:0}
@@ -75,9 +83,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .field{display:flex;flex-direction:column;gap:6px;width:100%;min-width:0}
 .field.full{width:100%}
 .field label{font-size:12px;color:var(--muted);font-weight:700}
-.field input,.field select,.field textarea{display:block;width:100%;max-width:100%;min-width:0;border:1px solid var(--line);border-radius:var(--control-radius);background:#fff;color:var(--text);font:inherit;padding:0 14px;height:var(--control-h);min-height:var(--control-h)}
+.field input,.field select,.field textarea{display:block;width:100%;max-width:100%;min-width:0;border:1px solid #d8dee8;border-radius:var(--control-radius);background:#fff;color:var(--text);font:inherit;padding:0 16px;height:var(--control-h);min-height:var(--control-h);box-shadow:none;outline:none}
 .field textarea{height:112px;min-height:112px;padding:14px;resize:vertical}
-.checkline{display:flex;align-items:center;gap:10px;width:100%;height:var(--control-h);min-height:var(--control-h);padding:0 14px;border:1px solid var(--line);border-radius:var(--control-radius);white-space:nowrap;background:#fff}
+.checkline{display:flex;align-items:center;gap:10px;width:100%;height:var(--control-h);min-height:var(--control-h);padding:0 16px;border:1px solid #d8dee8;border-radius:var(--control-radius);white-space:nowrap;background:#fff;box-shadow:none}
 .checkline input{width:22px;height:22px;min-height:0;flex:0 0 22px;margin:0;padding:0}
 .health-summary{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:13px;line-height:1.55}
 .health-msg{margin-top:8px;font-size:12px;color:var(--muted);min-height:18px}
@@ -89,9 +97,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .life-row.one{grid-template-columns:1fr}
 .life-field{display:flex;flex-direction:column;gap:5px;min-width:0}
 .life-field label{font-size:12px;color:var(--muted);font-weight:700}
-.life-field input,.life-field select{display:block;width:100%;max-width:100%;min-width:0;height:var(--control-h);min-height:var(--control-h);border:1px solid var(--line);border-radius:var(--control-radius);background:#fff;color:var(--text);font:inherit;padding:0 14px}
+.life-field input,.life-field select{display:block;width:100%;max-width:100%;min-width:0;height:var(--control-h);min-height:var(--control-h);border:1px solid #d8dee8;border-radius:var(--control-radius);background:#fff;color:var(--text);font:inherit;padding:0 16px;box-shadow:none;outline:none}
 .life-msg{font-size:12px;color:var(--muted);min-height:18px;margin-top:4px}
-.sleep-total{margin-top:12px;width:100%;height:var(--control-h);min-height:var(--control-h);padding:0 14px;border-radius:var(--control-radius);background:#eef5ff;font-size:14px;font-weight:750;display:flex;align-items:center;justify-content:center;text-align:center}
+.sleep-total{margin-top:12px;width:100%;height:var(--control-h);min-height:var(--control-h);padding:0 16px;border:1px solid #d8dee8;border-radius:var(--control-radius);background:#eef5ff;font-size:14px;font-weight:750;display:flex;align-items:center;justify-content:center;text-align:center}
 .pie-wrap{display:flex;flex-direction:column;gap:16px;align-items:center;margin-top:14px;width:100%}
 .pie{width:180px;height:180px;border-radius:50%;background:#eef0f4;position:relative;box-shadow:inset 0 0 0 1px var(--line);flex:0 0 auto}
 .pie::after{content:attr(data-center);white-space:nowrap;position:absolute;inset:36px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;text-align:center;font-size:24px;line-height:1;font-weight:800;color:var(--text);box-shadow:0 0 0 1px var(--line);padding:8px;font-variant-numeric:tabular-nums}
@@ -114,6 +122,11 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   .timeline-row{grid-template-columns:42px minmax(0,1fr)}
   .timeline-scale{margin-left:48px}
 }
+.manual-entry{width:100%;border:0;margin:0}
+.manual-entry summary{list-style:none;width:100%;height:var(--control-h);border:1px solid #d8dee8;border-radius:var(--control-radius);background:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer}
+.manual-entry summary::-webkit-details-marker{display:none}
+.manual-entry[open] summary{margin-bottom:12px}
+.manual-body{display:flex;flex-direction:column;gap:12px}
 .backup-title{font-size:18px;font-weight:750;margin:0 0 6px}
 .backup-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .backup-msg{margin-top:10px;font-size:12px;color:var(--muted);min-height:18px}
@@ -182,7 +195,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v4</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v5</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。計測中は円グラフ・合計時間・タイムラインがリアルタイムで更新されます。</div>
 
     <div class="life-controls">
@@ -209,17 +222,21 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         </div>
       </div>
 
-      <div class="life-row">
-        <div class="life-field">
-          <label for="lifeStart">開始時刻</label>
-          <input id="lifeStart" type="time">
+      <details class="manual-entry">
+        <summary>あとから時間を追加</summary>
+        <div class="manual-body">
+          <div class="life-field">
+            <label for="lifeStart">開始時刻</label>
+            <input id="lifeStart" type="time">
+          </div>
+          <div class="life-field">
+            <label for="lifeEnd">終了時刻</label>
+            <input id="lifeEnd" type="time">
+          </div>
+          <button class="secondary" id="addLifeManual" type="button">この時間を追加</button>
+          <div class="small">計測ボタンを押し忘れたときだけ使います。</div>
         </div>
-        <div class="life-field">
-          <label for="lifeEnd">終了時刻</label>
-          <input id="lifeEnd" type="time">
-        </div>
-      </div>
-      <button class="secondary" id="addLifeManual" type="button">この時間を追加</button>
+      </details>
       <div class="life-msg" id="lifeMsg"></div>
     </div>
 
