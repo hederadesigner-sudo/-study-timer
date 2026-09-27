@@ -257,6 +257,26 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .manual-entry summary::-webkit-details-marker{display:none}
 .manual-entry[open] summary{margin-bottom:12px}
 .manual-body{display:flex;flex-direction:column;gap:12px}
+.cloud-title{font-size:18px;font-weight:750;margin:0 0 6px}
+.cloud-grid{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.cloud-grid input{
+  width:100%;
+  height:var(--control-h);
+  min-height:var(--control-h);
+  border:1px solid #d8dee8;
+  border-radius:var(--control-radius);
+  background:#fff;
+  color:var(--text);
+  padding:0 16px;
+  font-size:16px;
+  box-shadow:none;
+  outline:none;
+}
+.cloud-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cloud-status{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5;min-height:18px}
+.cloud-account{margin-top:10px;padding:12px 14px;border:1px solid #d8dee8;border-radius:var(--control-radius);background:#eef5ff;font-size:13px;line-height:1.5}
+.cloud-hidden{display:none!important}
+@media(max-width:430px){.cloud-actions{grid-template-columns:1fr}}
 .backup-title{font-size:18px;font-weight:750;margin:0 0 6px}
 .backup-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .backup-grid .secondary{white-space:nowrap;font-size:13px;padding-left:8px;padding-right:8px}
@@ -441,6 +461,29 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     </div>
   </div>
 
+  <div class="card" id="cloudCard">
+    <div class="cloud-title">クラウド同期</div>
+    <div class="small">同じアカウントでログインすると、WebアプリとSafariで勉強・生活時間・体調・生理記録をSupabaseに同期します。</div>
+
+    <div id="cloudSignedOut" class="cloud-grid">
+      <input id="cloudEmail" type="email" autocomplete="email" placeholder="メールアドレス">
+      <input id="cloudPassword" type="password" autocomplete="current-password" placeholder="パスワード（6文字以上）">
+      <div class="cloud-actions">
+        <button class="secondary" id="cloudSignIn" type="button">ログイン</button>
+        <button class="secondary" id="cloudSignUp" type="button">新規登録</button>
+      </div>
+    </div>
+
+    <div id="cloudSignedIn" class="cloud-hidden">
+      <div class="cloud-account" id="cloudAccount">ログイン済み</div>
+      <div class="cloud-actions" style="margin-top:10px">
+        <button class="secondary" id="cloudSyncNow" type="button">今すぐ同期</button>
+        <button class="secondary" id="cloudSignOut" type="button">ログアウト</button>
+      </div>
+    </div>
+    <div class="cloud-status" id="cloudStatus">未ログイン：現在は端末内に保存しています。</div>
+  </div>
+
   <div class="card">
     <div class="backup-title">データのバックアップ</div>
     <div class="small">勉強記録をJSONファイルとして保存しておけば、Webアプリを削除した場合や機種変更後でも復元できます。</div>
@@ -453,11 +496,12 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="note">
-    記録はこの端末のSafari / Webアプリ内に保存されます。ページを閉じても、計測中なら開始時刻を保持し、次に開いたときに経過時間を反映します。
+    記録はまずこの端末に保存され、クラウド同期へログイン中はSupabaseにも自動保存されます。ページを閉じても、計測中なら開始時刻を保持します。
     <div id="recoveryStatus" style="margin-top:6px"></div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (() => {
   const KEY="study_timer_15min_v5";
@@ -466,6 +510,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const RECOVERED_SECONDS=358*60;
   const LAST_WEEK_KEY="2026-09-21";
   const LAST_WEEK_MIN_SECONDS=24*60*60;
+  const SUPABASE_URL="https://aluvrythpkdzrjimovqk.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY="sb_publishable_191VvG8MB46w_m_Zg1cJRA_xNTv237N";
+  const CLOUD_META_KEY="study_timer_cloud_meta_v1";
 
   const timerEl=document.getElementById("timer");
   const toggleBtn=document.getElementById("toggle");
@@ -514,8 +561,48 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const lifeTimelineEl=document.getElementById("lifeTimeline");
   const sleepTotalEl=document.getElementById("sleepTotal");
   const liveActivityStatusEl=document.getElementById("liveActivityStatus");
+  const cloudSignedOutEl=document.getElementById("cloudSignedOut");
+  const cloudSignedInEl=document.getElementById("cloudSignedIn");
+  const cloudEmailEl=document.getElementById("cloudEmail");
+  const cloudPasswordEl=document.getElementById("cloudPassword");
+  const cloudSignInBtn=document.getElementById("cloudSignIn");
+  const cloudSignUpBtn=document.getElementById("cloudSignUp");
+  const cloudSyncNowBtn=document.getElementById("cloudSyncNow");
+  const cloudSignOutBtn=document.getElementById("cloudSignOut");
+  const cloudAccountEl=document.getElementById("cloudAccount");
+  const cloudStatusEl=document.getElementById("cloudStatus");
   let selectedWeekOffset=0;
   let selectedMonthOffset=0;
+
+  let cloudClient=null;
+  let cloudUser=null;
+  let cloudPushTimer=null;
+  let cloudSyncing=false;
+  let suppressCloudPush=false;
+
+  function readCloudMeta(){
+    try{
+      const raw=localStorage.getItem(CLOUD_META_KEY);
+      return raw?JSON.parse(raw):{};
+    }catch(e){ return {}; }
+  }
+
+  function writeCloudMeta(meta){
+    try{ localStorage.setItem(CLOUD_META_KEY,JSON.stringify(meta||{})); }catch(e){}
+  }
+
+  function setCloudStatus(message){
+    if(cloudStatusEl) cloudStatusEl.textContent=message;
+  }
+
+  function setCloudUi(){
+    const signedIn=!!cloudUser;
+    if(cloudSignedOutEl) cloudSignedOutEl.classList.toggle("cloud-hidden",signedIn);
+    if(cloudSignedInEl) cloudSignedInEl.classList.toggle("cloud-hidden",!signedIn);
+    if(cloudAccountEl && cloudUser){
+      cloudAccountEl.textContent="ログイン中："+(cloudUser.email||"Supabaseアカウント");
+    }
+  }
 
   function dateKey(d=new Date()){
     const y=d.getFullYear();
@@ -556,6 +643,49 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       target[k]=Math.max(Number(target[k]||0),sec);
     });
     return target;
+  }
+
+  function mergeCloudState(localState,remoteState){
+    const local=localState&&typeof localState==="object"?localState:defaultData();
+    const remote=remoteState&&typeof remoteState==="object"?remoteState:defaultData();
+    const merged=defaultData();
+
+    merged.days=mergeRecoveredDays({...remote.days||{}},local.days||{});
+    merged.weekMinimums={...remote.weekMinimums||{}};
+    Object.entries(local.weekMinimums||{}).forEach(([k,v])=>{
+      merged.weekMinimums[k]=Math.max(Number(merged.weekMinimums[k]||0),Number(v||0));
+    });
+
+    merged.health={...remote.health||{},...local.health||{}};
+    merged.periodRanges=normalizePeriodRanges([...(remote.periodRanges||[]),...(local.periodRanges||[])]);
+
+    const sessions=[];
+    const seen=new Set();
+    [...(remote.activitySessions||[]),...(local.activitySessions||[])].forEach(x=>{
+      if(!x||typeof x!=="object") return;
+      const id=x.id||[x.date,x.category,x.start,x.end].join("|");
+      if(seen.has(id)) return;
+      seen.add(id);
+      sessions.push(x);
+    });
+    merged.activitySessions=sessions;
+
+    if(local.running){
+      merged.running=true;
+      merged.startedAt=local.startedAt;
+      merged.runningDate=local.runningDate;
+    }else if(remote.running){
+      merged.running=true;
+      merged.startedAt=remote.startedAt;
+      merged.runningDate=remote.runningDate;
+    }else{
+      merged.running=false;
+      merged.startedAt=null;
+      merged.runningDate=null;
+    }
+
+    merged.activityRunning=local.activityRunning||remote.activityRunning||null;
+    return merged;
   }
 
   function recoverLegacyDays(baseDays){
@@ -621,6 +751,164 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
   function save(data){
     try{ localStorage.setItem(KEY,JSON.stringify(data)); }catch(e){}
+    if(!suppressCloudPush && cloudUser){
+      const meta=readCloudMeta();
+      writeCloudMeta({...meta,userId:cloudUser.id,dirty:true});
+      scheduleCloudPush(data);
+    }
+  }
+
+  function scheduleCloudPush(data){
+    if(!cloudUser||!cloudClient||suppressCloudPush) return;
+    if(cloudPushTimer) clearTimeout(cloudPushTimer);
+    const snapshot=JSON.parse(JSON.stringify(data||load()));
+    cloudPushTimer=setTimeout(()=>pushCloudState(snapshot),700);
+  }
+
+  async function pushCloudState(data){
+    if(!cloudUser||!cloudClient) return false;
+    try{
+      const {data:rows,error}=await cloudClient
+        .from("app_state")
+        .upsert({user_id:cloudUser.id,state:data},{onConflict:"user_id"})
+        .select("updated_at")
+        .single();
+      if(error) throw error;
+      writeCloudMeta({userId:cloudUser.id,lastSync:rows&&rows.updated_at?rows.updated_at:new Date().toISOString(),dirty:false});
+      setCloudStatus("クラウドに保存済み");
+      return true;
+    }catch(e){
+      setCloudStatus("クラウド保存に失敗しました。端末内の記録は保持されています。");
+      return false;
+    }
+  }
+
+  async function reconcileCloud(){
+    if(!cloudUser||!cloudClient||cloudSyncing) return;
+    cloudSyncing=true;
+    setCloudStatus("クラウドと同期中…");
+    try{
+      const {data:row,error}=await cloudClient
+        .from("app_state")
+        .select("state,updated_at")
+        .eq("user_id",cloudUser.id)
+        .maybeSingle();
+      if(error) throw error;
+
+      const local=load();
+      const meta=readCloudMeta();
+
+      if(!row){
+        await pushCloudState(local);
+      }else if(meta.userId!==cloudUser.id || !meta.lastSync){
+        const merged=mergeCloudState(local,row.state||{});
+        suppressCloudPush=true;
+        try{ localStorage.setItem(KEY,JSON.stringify(merged)); }catch(e){}
+        suppressCloudPush=false;
+        await pushCloudState(merged);
+        render();
+      }else{
+        const remoteMs=Date.parse(row.updated_at||0)||0;
+        const syncedMs=Date.parse(meta.lastSync||0)||0;
+        if(meta.dirty){
+          const merged=remoteMs>syncedMs?mergeCloudState(local,row.state||{}):local;
+          suppressCloudPush=true;
+          try{ localStorage.setItem(KEY,JSON.stringify(merged)); }catch(e){}
+          suppressCloudPush=false;
+          await pushCloudState(merged);
+          render();
+        }else if(remoteMs>syncedMs){
+          const remoteState=mergeCloudState(defaultData(),row.state||{});
+          suppressCloudPush=true;
+          try{ localStorage.setItem(KEY,JSON.stringify(remoteState)); }catch(e){}
+          suppressCloudPush=false;
+          writeCloudMeta({userId:cloudUser.id,lastSync:row.updated_at,dirty:false});
+          setCloudStatus("クラウドから最新データを読み込みました。");
+          render();
+        }else{
+          setCloudStatus("クラウドに保存済み");
+        }
+      }
+    }catch(e){
+      setCloudStatus("同期に失敗しました。端末内の記録はそのまま使えます。");
+    }finally{
+      cloudSyncing=false;
+    }
+  }
+
+  async function cloudSignIn(){
+    if(!cloudClient) return;
+    const email=(cloudEmailEl.value||"").trim();
+    const password=cloudPasswordEl.value||"";
+    if(!email||password.length<6){
+      setCloudStatus("メールアドレスと6文字以上のパスワードを入力してください。");
+      return;
+    }
+    setCloudStatus("ログイン中…");
+    const {data,error}=await cloudClient.auth.signInWithPassword({email,password});
+    if(error){
+      setCloudStatus("ログインできませんでした。メールアドレス・パスワード・メール認証を確認してください。");
+      return;
+    }
+    cloudUser=data.user||null;
+    setCloudUi();
+    await reconcileCloud();
+  }
+
+  async function cloudSignUp(){
+    if(!cloudClient) return;
+    const email=(cloudEmailEl.value||"").trim();
+    const password=cloudPasswordEl.value||"";
+    if(!email||password.length<6){
+      setCloudStatus("メールアドレスと6文字以上のパスワードを入力してください。");
+      return;
+    }
+    setCloudStatus("アカウントを作成中…");
+    const {data,error}=await cloudClient.auth.signUp({email,password});
+    if(error){
+      setCloudStatus("新規登録できませんでした："+error.message);
+      return;
+    }
+    if(data.session&&data.user){
+      cloudUser=data.user;
+      setCloudUi();
+      await reconcileCloud();
+    }else{
+      setCloudStatus("確認メールを送信しました。メール認証後、この画面に戻ってログインしてください。");
+    }
+  }
+
+  async function cloudSignOut(){
+    if(!cloudClient) return;
+    await cloudClient.auth.signOut();
+    cloudUser=null;
+    setCloudUi();
+    setCloudStatus("ログアウトしました。現在は端末内に保存しています。");
+  }
+
+  async function initCloud(){
+    if(!window.supabase||!window.supabase.createClient){
+      setCloudStatus("クラウド同期の読み込みに失敗しました。端末内保存で利用できます。");
+      return;
+    }
+    cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+    });
+
+    const {data}=await cloudClient.auth.getSession();
+    cloudUser=data&&data.session?data.session.user:null;
+    setCloudUi();
+    if(cloudUser) await reconcileCloud();
+
+    cloudClient.auth.onAuthStateChange((event,session)=>{
+      const nextUser=session?session.user:null;
+      const changed=(cloudUser&&nextUser)?cloudUser.id!==nextUser.id:cloudUser!==nextUser;
+      cloudUser=nextUser;
+      setCloudUi();
+      if(cloudUser&&changed){
+        setTimeout(()=>reconcileCloud(),0);
+      }
+    });
   }
 
   function fmtCompactHM(sec){
@@ -1540,6 +1828,14 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
   saveHealthBtn.addEventListener("click",saveHealthRecord);
   exportHealthPdfBtn.addEventListener("click",exportHealthMonthPdf);
 
+  cloudSignInBtn.addEventListener("click",cloudSignIn);
+  cloudSignUpBtn.addEventListener("click",cloudSignUp);
+  cloudSyncNowBtn.addEventListener("click",reconcileCloud);
+  cloudSignOutBtn.addEventListener("click",cloudSignOut);
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState==="visible"&&cloudUser) reconcileCloud();
+  });
+
   backupBtn.addEventListener("click",saveBackupFile);
   restoreBtn.addEventListener("click",()=>restoreInput.click());
   restoreInput.addEventListener("change",()=>{
@@ -1548,6 +1844,7 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
   });
 
   render();
+  initCloud();
   setInterval(render,500);
 })();
 </script>
