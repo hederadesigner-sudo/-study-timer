@@ -94,6 +94,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
   <div class="note">
     記録はこの端末のSafariに保存されます。ページを閉じても、計測中なら開始時刻を保持し、次に開いたときに経過時間を反映します。
+    <div id="recoveryStatus" style="margin-top:6px"></div>
   </div>
 </div>
 
@@ -118,6 +119,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const minusBtn=document.getElementById("minus15");
   const plusBtn=document.getElementById("plus15");
   const statusText=document.getElementById("statusText");
+  const recoveryStatusEl=document.getElementById("recoveryStatus");
   let selectedWeekOffset=0;
 
   function dateKey(d=new Date()){
@@ -131,23 +133,73 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return {days:{[SEEDED_DATE]:RECOVERED_SECONDS}, running:false, startedAt:null, runningDate:null};
   }
 
+  const LEGACY_KEYS=[
+    "study_timer_15min_v1",
+    "study_timer_15min_v2",
+    "study_timer_15min_v3",
+    "study_timer_15min_v4",
+    "study_timer_15min_v5",
+    "study_timer_15min_v6",
+    "study_timer_v6"
+  ];
+
+  function mergeRecoveredDays(target, source){
+    if(!source || typeof source!=="object") return target;
+    Object.entries(source).forEach(([k,v])=>{
+      const sec=Number(v||0);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(k) || !Number.isFinite(sec) || sec<0) return;
+      target[k]=Math.max(Number(target[k]||0),sec);
+    });
+    return target;
+  }
+
+  function recoverLegacyDays(baseDays){
+    const recovered={...baseDays};
+
+    LEGACY_KEYS.forEach(key=>{
+      try{
+        const raw=localStorage.getItem(key);
+        if(!raw) return;
+        const obj=JSON.parse(raw);
+        if(obj && obj.days) mergeRecoveredDays(recovered,obj.days);
+      }catch(e){}
+    });
+
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const key=localStorage.key(i);
+        if(!key || !key.startsWith("study-grid-")) continue;
+        const d=key.slice("study-grid-".length);
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+        const arr=JSON.parse(localStorage.getItem(key));
+        if(!Array.isArray(arr)) continue;
+        const sec=arr.filter(Boolean).length*900;
+        recovered[d]=Math.max(Number(recovered[d]||0),sec);
+      }
+    }catch(e){}
+
+    recovered[SEEDED_DATE]=Math.max(Number(recovered[SEEDED_DATE]||0),RECOVERED_SECONDS);
+    return recovered;
+  }
+
   function load(){
+    let d=defaultData();
     try{
       const raw=localStorage.getItem(KEY);
-      if(!raw){
-        const d=defaultData();
-        localStorage.setItem(KEY,JSON.stringify(d));
-        return d;
+      if(raw){
+        const parsed=JSON.parse(raw);
+        if(parsed && typeof parsed==="object") d=parsed;
       }
-      const d=JSON.parse(raw);
-      if(!d.days) d.days={};
-      if(typeof d.days[SEEDED_DATE]==="undefined") d.days[SEEDED_DATE]=RECOVERED_SECONDS;
-      if(Number(d.days[SEEDED_DATE]||0) < RECOVERED_SECONDS) d.days[SEEDED_DATE]=RECOVERED_SECONDS;
-      localStorage.setItem(KEY,JSON.stringify(d));
-      return d;
-    }catch(e){
-      return defaultData();
-    }
+    }catch(e){}
+
+    if(!d.days) d.days={};
+    d.days=recoverLegacyDays(d.days);
+    if(typeof d.running!=="boolean") d.running=false;
+    if(!("startedAt" in d)) d.startedAt=null;
+    if(!("runningDate" in d)) d.runningDate=null;
+
+    try{ localStorage.setItem(KEY,JSON.stringify(d)); }catch(e){}
+    return d;
   }
 
   function save(data){
@@ -231,6 +283,10 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
     const savedTotalSec=Object.values(data.days).reduce((sum,v)=>sum+Number(v||0),0);
     allTimeTotalEl.textContent=fmtMin(savedTotalSec+live);
+    if(recoveryStatusEl){
+      const dayCount=Object.keys(data.days).filter(k=>Number(data.days[k]||0)>0).length;
+      recoveryStatusEl.textContent="保存済み記録："+dayCount+"日分";
+    }
 
     if(data.running){
       toggleBtn.textContent="■ 勉強終了";
