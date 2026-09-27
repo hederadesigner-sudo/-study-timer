@@ -11,14 +11,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="勉強タイマー">
 <title>勉強タイマー</title>
-<meta name="build" content="2026-09-28-live-v3">
+<meta name="build" content="2026-09-28-frame-unify-v1">
 <style>
 :root{
   --bg:#f6f7f9; --card:#ffffff; --text:#172033; --muted:#717b8d;
   --line:#e2e6ec; --accent:#5146e5; --accent-soft:#eceaff; --block:#5146e5;
+  --control-h:56px; --control-radius:14px;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
+input,select,textarea,button{max-width:100%}
 body{
   margin:0; min-height:100%; background:var(--bg); color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;
@@ -28,7 +30,7 @@ button{font:inherit;-webkit-tap-highlight-color:transparent}
 .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:14px;overflow:hidden}
 h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-height:1.45}
 .timer{font-size:50px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:.015em;margin:18px 0 14px;text-align:center}
-.primary{width:100%;min-height:54px;border:0;border-radius:15px;background:var(--accent);color:#fff;font-size:17px;font-weight:750;cursor:pointer}
+.primary{width:100%;height:var(--control-h);min-height:var(--control-h);border:1px solid var(--accent);border-radius:var(--control-radius);background:var(--accent);color:#fff;font-size:17px;font-weight:750;cursor:pointer}
 .primary.running{background:#171c27}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:13px}
 .stat{padding:13px 10px;border:1px solid var(--line);border-radius:15px;text-align:center;min-width:0}
@@ -50,7 +52,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .label{margin-top:2px;font-size:12px;font-weight:700}.date{font-size:10px;color:var(--muted)}
 .legend{margin-top:10px;font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
 .actions{display:flex;gap:8px;margin-top:13px}
-.secondary{flex:1;min-height:46px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--text);font-size:14px;font-weight:650;cursor:pointer}
+.secondary{display:flex;align-items:center;justify-content:center;width:100%;height:var(--control-h);min-height:var(--control-h);border:1px solid var(--line);border-radius:var(--control-radius);background:#fff;color:var(--text);font-size:14px;font-weight:700;cursor:pointer;padding:0 14px}
 .note{font-size:12px;line-height:1.65;color:var(--muted);padding:0 3px}
 .month-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
 .month-title h2{font-size:19px;margin:0}
@@ -70,27 +72,27 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .cal-time{font-size:9px;color:var(--muted);margin-top:7px;line-height:1.15;text-align:center;white-space:nowrap}
 .month-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:9px;text-align:center}
 .health-title{font-size:19px;font-weight:750;margin:0 0 6px}
-.health-grid{display:flex;flex-direction:column;gap:12px;margin-top:12px;width:100%}
+.health-grid{display:flex;flex-direction:column;gap:12px;margin-top:14px;width:100%}
 .field{display:flex;flex-direction:column;gap:6px;width:100%;min-width:0}
 .field.full{width:100%}
 .field label{font-size:12px;color:var(--muted);font-weight:700}
-.field input,.field select,.field textarea{display:block;width:100%;max-width:100%;min-width:0;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);font:inherit;padding:11px 10px;min-height:48px}
-.field textarea{min-height:76px;resize:vertical}
-.checkline{display:flex;align-items:center;gap:10px;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;white-space:nowrap}
+.field input,.field select,.field textarea{display:block;width:100%;max-width:100%;min-width:0;border:1px solid var(--line);border-radius:var(--control-radius);background:#fff;color:var(--text);font:inherit;padding:0 14px;height:var(--control-h);min-height:var(--control-h)}
+.field textarea{height:112px;min-height:112px;padding:14px;resize:vertical}
+.checkline{display:flex;align-items:center;gap:10px;width:100%;height:var(--control-h);min-height:var(--control-h);padding:0 14px;border:1px solid var(--line);border-radius:var(--control-radius);white-space:nowrap;background:#fff}
 .checkline input{width:22px;height:22px;min-height:0;flex:0 0 22px;margin:0;padding:0}
 .health-summary{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:13px;line-height:1.55}
 .health-msg{margin-top:8px;font-size:12px;color:var(--muted);min-height:18px}
 .cal-health{font-size:8px;line-height:1.2;margin-top:3px;text-align:center;color:var(--text)}
 .period-mark{font-size:8px;font-weight:750;margin-top:2px}
 .life-title{font-size:19px;font-weight:750;margin:0 0 6px}
-.life-controls{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.life-controls{display:flex;flex-direction:column;gap:12px;margin-top:14px}
 .life-row{display:grid;grid-template-columns:1fr;gap:10px}
 .life-row.one{grid-template-columns:1fr}
 .life-field{display:flex;flex-direction:column;gap:5px;min-width:0}
 .life-field label{font-size:12px;color:var(--muted);font-weight:700}
-.life-field input,.life-field select{width:100%;max-width:100%;min-width:0;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);font:inherit;padding:11px 10px;min-height:48px}
+.life-field input,.life-field select{display:block;width:100%;max-width:100%;min-width:0;height:var(--control-h);min-height:var(--control-h);border:1px solid var(--line);border-radius:var(--control-radius);background:#fff;color:var(--text);font:inherit;padding:0 14px}
 .life-msg{font-size:12px;color:var(--muted);min-height:18px;margin-top:4px}
-.sleep-total{margin-top:14px;padding:12px 14px;border-radius:14px;background:#eef5ff;font-size:14px;font-weight:750;text-align:center}
+.sleep-total{margin-top:12px;width:100%;height:var(--control-h);min-height:var(--control-h);padding:0 14px;border-radius:var(--control-radius);background:#eef5ff;font-size:14px;font-weight:750;display:flex;align-items:center;justify-content:center;text-align:center}
 .pie-wrap{display:flex;flex-direction:column;gap:16px;align-items:center;margin-top:14px;width:100%}
 .pie{width:180px;height:180px;border-radius:50%;background:#eef0f4;position:relative;box-shadow:inset 0 0 0 1px var(--line);flex:0 0 auto}
 .pie::after{content:attr(data-center);white-space:pre-line;position:absolute;inset:36px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;text-align:center;font-size:15px;line-height:1.35;font-weight:800;color:var(--text);box-shadow:0 0 0 1px var(--line);padding:8px}
@@ -203,8 +205,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
             <option value="other">その他</option>
           </select>
         </div>
-        <div class="life-field">
-          <label>&nbsp;</label>
+        <div class="life-field action-field">
           <button class="secondary" id="lifeToggle" type="button">この活動を開始</button>
         </div>
       </div>
