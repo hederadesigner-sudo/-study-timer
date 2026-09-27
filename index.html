@@ -107,10 +107,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .cal-day{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;line-height:1;color:var(--text)}
 .cal-cell.today .cal-day{background:#ff9f0a;color:#fff}
 .cal-cell.selected:not(.today) .cal-day{background:var(--accent);color:#fff}
-.cal-cell.condition-bad:not(.today):not(.selected) .cal-day{box-shadow:0 0 0 2px #ef8f98 inset;color:#c84a55}
+.cal-cell.condition-bad:not(.today){background:#ffe1e4}
+.cal-cell.condition-bad:not(.today) .cal-day{box-shadow:none;color:var(--text)}
+.cal-cell.condition-bad:not(.today) .cal-time,
+.cal-cell.condition-bad:not(.today) .cal-health{color:var(--text)}
 .cal-time{font-size:9px;color:var(--accent);margin-top:5px;line-height:1.1;text-align:center;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .cal-health{font-size:8px;line-height:1.1;margin-top:3px;text-align:center;color:var(--muted)}
-.cal-cell.condition-bad .cal-health{color:#c84a55;font-weight:700}
+.cal-cell.condition-bad .cal-health{font-weight:700}
 .period-strip{
   position:absolute;
   left:-4px;
@@ -244,7 +247,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v11</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v12</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。計測中は円グラフ・合計時間・タイムラインがリアルタイムで更新されます。</div>
 
     <div class="life-controls">
