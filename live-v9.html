@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="勉強タイマー">
 <title>勉強タイマー</title>
-<meta name="build" content="2026-09-28-live-v9-ios-calendar">
+<meta name="build" content="2026-09-28-live-v9-period-chip">
 <style>
 :root{
   --bg:#f6f7f9; --card:#ffffff; --text:#172033; --muted:#717b8d;
@@ -990,8 +990,11 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         const isWeekEnd=d.getDay()===0;
         const isMonthStart=day===1;
         const isMonthEnd=day===daysInMonth;
-        if(k===range.start||isWeekStart||isMonthStart) periodEl.classList.add("start");
-        if(k===range.end||isWeekEnd||isMonthEnd) periodEl.classList.add("end");
+        const segmentStart=(k===range.start||isWeekStart||isMonthStart);
+        const segmentEnd=(k===range.end||isWeekEnd||isMonthEnd);
+        if(segmentStart) periodEl.classList.add("start");
+        if(segmentEnd) periodEl.classList.add("end");
+        if(segmentStart) periodEl.textContent="生理";
       }
 
       cell.append(dayEl,timeEl,healthEl);
