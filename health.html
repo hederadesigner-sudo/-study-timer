@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="勉強タイマー">
 <title>勉強タイマー</title>
-<meta name="build" content="2026-09-28-health-v2">
+<meta name="build" content="2026-09-28-health-layout-v2">
 <style>
 :root{
   --bg:#f6f7f9; --card:#ffffff; --text:#172033; --muted:#717b8d;
@@ -76,7 +76,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .field label{font-size:12px;color:var(--muted);font-weight:700}
 .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);font:inherit;padding:11px 10px;min-height:44px}
 .field textarea{min-height:76px;resize:vertical}
-.checkline{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:12px}
+.checkline{display:flex;align-items:center;gap:10px;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;white-space:nowrap}
+.checkline input{width:22px;height:22px;min-height:0;flex:0 0 22px;margin:0;padding:0}
 .health-summary{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:13px;line-height:1.55}
 .health-msg{margin-top:8px;font-size:12px;color:var(--muted);min-height:18px}
 .cal-health{font-size:8px;line-height:1.2;margin-top:3px;text-align:center;color:var(--text)}
@@ -167,7 +168,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         <input id="sleepEnd" type="time">
       </div>
 
-      <div class="field">
+      <div class="field full">
         <label for="condition">体調</label>
         <select id="condition">
           <option value="">未記録</option>
@@ -179,9 +180,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         </select>
       </div>
 
-      <div class="field">
+      <div class="field full">
         <label>生理</label>
-        <label class="checkline"><input id="periodDay" type="checkbox"> 生理日</label>
+        <label class="checkline" for="periodDay"><input id="periodDay" type="checkbox"><span>生理日として記録</span></label>
       </div>
 
       <div class="field full">
