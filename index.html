@@ -161,6 +161,23 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   font-weight:750;
   font-variant-numeric:tabular-nums;
 }
+.health-report{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.health-report-title{font-size:15px;font-weight:750;margin-bottom:4px}
+.health-report-row{display:grid;grid-template-columns:1fr 1.35fr;gap:8px;margin-top:10px}
+.health-report-row input[type="month"]{
+  width:100%;
+  height:var(--control-h);
+  min-height:var(--control-h);
+  border:1px solid #d8dee8;
+  border-radius:var(--control-radius);
+  background:#fff;
+  color:var(--text);
+  padding:0 12px;
+  font-size:16px;
+}
+@media(max-width:430px){
+  .health-report-row{grid-template-columns:1fr}
+}
 .cal-health{font-size:8px;line-height:1.2;margin-top:3px;text-align:center;color:var(--text)}
 .period-mark{font-size:8px;font-weight:750;margin-top:2px}
 .life-title{font-size:19px;font-weight:750;margin:0 0 6px}
@@ -268,7 +285,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v15</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v16</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。計測中は円グラフ・合計時間・タイムラインがリアルタイムで更新されます。</div>
 
     <div class="life-controls">
@@ -372,6 +389,15 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
     <button class="primary" id="saveHealth" type="button" style="margin-top:10px">記録を保存</button>
     <div class="health-msg" id="healthMsg"></div>
+
+    <div class="health-report">
+      <div class="health-report-title">月次PDF</div>
+      <div class="small">体調・睡眠・生理・メモを1ヶ月分の表にまとめて出力します。</div>
+      <div class="health-report-row">
+        <input id="healthReportMonth" type="month">
+        <button class="secondary" id="exportHealthPdf" type="button">1ヶ月分をPDF出力</button>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -433,6 +459,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const healthMemoEl=document.getElementById("healthMemo");
   const healthMsgEl=document.getElementById("healthMsg");
   const saveHealthBtn=document.getElementById("saveHealth");
+  const healthReportMonthEl=document.getElementById("healthReportMonth");
+  const exportHealthPdfBtn=document.getElementById("exportHealthPdf");
   const lifeDateEl=document.getElementById("lifeDate");
   const lifeCategoryEl=document.getElementById("lifeCategory");
   const lifeToggleBtn=document.getElementById("lifeToggle");
@@ -904,11 +932,120 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     healthSleepTotalEl.textContent=fmtMin(sec);
   }
 
+  function escapeHtml(value){
+    return String(value??"")
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;")
+      .replace(/'/g,"&#039;");
+  }
+
+  function conditionLabel(value){
+    const map={1:"かなり悪い",2:"悪い",3:"普通",4:"良い",5:"とても良い"};
+    return map[Number(value)]||"";
+  }
+
+  function exportHealthMonthPdf(){
+    const monthValue=healthReportMonthEl.value;
+    if(!/^\d{4}-\d{2}$/.test(monthValue)){
+      healthMsgEl.textContent="PDFにする月を選択してください。";
+      return;
+    }
+
+    const [year,month]=monthValue.split("-").map(Number);
+    const daysInMonth=new Date(year,month,0).getDate();
+    const data=load();
+
+    let totalSleep=0;
+    let sleepDays=0;
+    const rows=[];
+
+    for(let day=1;day<=daysInMonth;day++){
+      const k=String(year)+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+      const sleep=activitySecondsForDate(data,k,"sleep");
+      const h=(data.health||{})[k]||{};
+      const period=!!periodRangeForDate(data,k);
+      if(sleep>0){ totalSleep+=sleep; sleepDays++; }
+
+      rows.push({
+        day,
+        sleep,
+        condition:h.condition||"",
+        period,
+        memo:h.memo||""
+      });
+    }
+
+    const avgSleep=sleepDays?Math.round(totalSleep/sleepDays):0;
+    const bodyRows=rows.map(r=>`
+      <tr>
+        <td>${r.day}日</td>
+        <td>${r.sleep?escapeHtml(fmtMin(r.sleep)):""}</td>
+        <td>${r.condition?escapeHtml(String(r.condition)+" "+conditionLabel(r.condition)):""}</td>
+        <td>${r.period?"●":""}</td>
+        <td class="memo">${escapeHtml(r.memo)}</td>
+      </tr>`).join("");
+
+    const html=`<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>体調・生理管理 ${year}年${month}月</title>
+<style>
+@page{size:A4 portrait;margin:12mm}
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;color:#172033;margin:0}
+h1{font-size:20px;margin:0 0 6px}
+.summary{font-size:11px;color:#5f6878;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}
+th,td{border:1px solid #cfd5df;padding:5px 4px;vertical-align:top}
+th{background:#f2f4f7;font-weight:700}
+th:nth-child(1),td:nth-child(1){width:9%}
+th:nth-child(2),td:nth-child(2){width:17%}
+th:nth-child(3),td:nth-child(3){width:20%}
+th:nth-child(4),td:nth-child(4){width:10%;text-align:center}
+th:nth-child(5),td:nth-child(5){width:44%}
+.memo{white-space:pre-wrap;word-break:break-word}
+.period-dot{color:#d95686}
+footer{margin-top:8px;font-size:8px;color:#7a8391}
+</style>
+</head>
+<body>
+<h1>体調・生理管理　${year}年${month}月</h1>
+<div class="summary">睡眠合計：${escapeHtml(fmtMin(totalSleep))}　／　睡眠記録日の平均：${sleepDays?escapeHtml(fmtMin(avgSleep)):"未記録"}　／　生理：●</div>
+<table>
+  <thead>
+    <tr><th>日付</th><th>睡眠</th><th>体調</th><th>生理</th><th>メモ</th></tr>
+  </thead>
+  <tbody>${bodyRows}</tbody>
+</table>
+<footer>勉強・生活時間記録から作成</footer>
+<script>
+window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
+<\/script>
+</body>
+</html>`;
+
+    const w=window.open("","_blank");
+    if(!w){
+      healthMsgEl.textContent="PDF出力画面を開けませんでした。ポップアップを許可してください。";
+      return;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    healthMsgEl.textContent="PDF出力画面を開きました。印刷画面からPDFとして保存できます。";
+  }
+
   function loadHealthForm(date){
     const data=load();
     const h=(data.health||{})[date]||{};
     updateHealthSleepTotal(data,date);
     healthDateEl.value=date;
+    if(healthReportMonthEl && /^\d{4}-\d{2}/.test(date)){
+      healthReportMonthEl.value=date.slice(0,7);
+    }
     conditionEl.value=h.condition?String(h.condition):"";
     healthMemoEl.value=h.memo||"";
     const range=periodRangeForDate(data,date);
@@ -1360,6 +1497,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     render();
   });
   saveHealthBtn.addEventListener("click",saveHealthRecord);
+  exportHealthPdfBtn.addEventListener("click",exportHealthMonthPdf);
 
   backupBtn.addEventListener("click",saveBackupFile);
   restoreBtn.addEventListener("click",()=>restoreInput.click());
