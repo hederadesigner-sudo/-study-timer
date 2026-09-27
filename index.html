@@ -145,6 +145,22 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .checkline input{width:22px;height:22px;min-height:0;flex:0 0 22px;margin:0;padding:0}
 .health-summary{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:13px;line-height:1.55}
 .health-msg{margin-top:8px;font-size:12px;color:var(--muted);min-height:18px}
+.health-sleep-total{
+  width:100%;
+  height:var(--control-h);
+  min-height:var(--control-h);
+  border:1px solid #d8dee8;
+  border-radius:var(--control-radius);
+  background:#eef5ff;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 16px;
+  font-size:16px;
+  font-weight:750;
+  font-variant-numeric:tabular-nums;
+}
 .cal-health{font-size:8px;line-height:1.2;margin-top:3px;text-align:center;color:var(--text)}
 .period-mark{font-size:8px;font-weight:750;margin-top:2px}
 .life-title{font-size:19px;font-weight:750;margin:0 0 6px}
@@ -252,7 +268,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v14</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v15</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。計測中は円グラフ・合計時間・タイムラインがリアルタイムで更新されます。</div>
 
     <div class="life-controls">
@@ -313,12 +329,17 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
   <div class="card" id="healthCard">
     <div class="health-title">体調・生理管理</div>
-    <div class="small">体調・メモに加えて、生理の開始日と終了日を記録できます。期間は月カレンダーへ自動反映します。</div>
+    <div class="small">睡眠の合計時間、体調・メモ、生理期間を確認できます。睡眠時間は生活時間の「睡眠」記録から自動集計します。</div>
 
     <div class="health-grid">
       <div class="field full">
         <label for="healthDate">日付</label>
         <input id="healthDate" type="date">
+      </div>
+
+      <div class="field full">
+        <label>睡眠時間</label>
+        <div class="health-sleep-total" id="healthSleepTotal">0分</div>
       </div>
 
       <div class="field full">
@@ -405,6 +426,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const monthAdjustEl=document.getElementById("monthAdjust");
   const monthCalendarEl=document.getElementById("monthCalendar");
   const healthDateEl=document.getElementById("healthDate");
+  const healthSleepTotalEl=document.getElementById("healthSleepTotal");
   const conditionEl=document.getElementById("condition");
   const periodStartEl=document.getElementById("periodStart");
   const periodEndEl=document.getElementById("periodEnd");
@@ -876,9 +898,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return merged;
   }
 
+  function updateHealthSleepTotal(data,date){
+    if(!healthSleepTotalEl) return;
+    const sec=activitySecondsForDate(data,date,"sleep");
+    healthSleepTotalEl.textContent=fmtMin(sec);
+  }
+
   function loadHealthForm(date){
     const data=load();
     const h=(data.health||{})[date]||{};
+    updateHealthSleepTotal(data,date);
     healthDateEl.value=date;
     conditionEl.value=h.condition?String(h.condition):"";
     healthMemoEl.value=h.memo||"";
@@ -1160,6 +1189,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     if(!lifeDateEl.value) lifeDateEl.value=today;
     if(!healthDateEl.value) loadHealthForm(today);
     renderLife(data);
+    updateHealthSleepTotal(data,healthDateEl.value||today);
 
     if(data.running){
       toggleBtn.textContent="■ 勉強終了";
