@@ -48,6 +48,10 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .actions{display:flex;gap:8px;margin-top:13px}
 .secondary{flex:1;min-height:46px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--text);font-size:14px;font-weight:650;cursor:pointer}
 .note{font-size:12px;line-height:1.65;color:var(--muted);padding:0 3px}
+.backup-title{font-size:18px;font-weight:750;margin:0 0 6px}
+.backup-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.backup-msg{margin-top:10px;font-size:12px;color:var(--muted);min-height:18px}
+.hidden-input{display:none}
 .badge{display:inline-flex;align-items:center;gap:6px;margin-top:9px;padding:6px 9px;border-radius:999px;background:var(--accent-soft);font-size:12px;color:var(--text)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
 @media(min-width:600px){
@@ -92,8 +96,19 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     </div>
   </div>
 
+  <div class="card">
+    <div class="backup-title">データのバックアップ</div>
+    <div class="small">勉強記録をJSONファイルとして保存しておけば、Webアプリを削除した場合や機種変更後でも復元できます。</div>
+    <div class="backup-grid">
+      <button class="secondary" id="backupBtn" type="button">バックアップを保存</button>
+      <button class="secondary" id="restoreBtn" type="button">バックアップから復元</button>
+    </div>
+    <input class="hidden-input" id="restoreInput" type="file" accept=".json,application/json">
+    <div class="backup-msg" id="backupMsg"></div>
+  </div>
+
   <div class="note">
-    記録はこの端末のSafariに保存されます。ページを閉じても、計測中なら開始時刻を保持し、次に開いたときに経過時間を反映します。
+    記録はこの端末のSafari / Webアプリ内に保存されます。ページを閉じても、計測中なら開始時刻を保持し、次に開いたときに経過時間を反映します。
     <div id="recoveryStatus" style="margin-top:6px"></div>
   </div>
 </div>
@@ -120,6 +135,10 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const plusBtn=document.getElementById("plus15");
   const statusText=document.getElementById("statusText");
   const recoveryStatusEl=document.getElementById("recoveryStatus");
+  const backupBtn=document.getElementById("backupBtn");
+  const restoreBtn=document.getElementById("restoreBtn");
+  const restoreInput=document.getElementById("restoreInput");
+  const backupMsg=document.getElementById("backupMsg");
   let selectedWeekOffset=0;
 
   function dateKey(d=new Date()){
@@ -259,6 +278,66 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const start=sameYear ? (a.getMonth()+1)+"/"+a.getDate() : a.getFullYear()+"/"+(a.getMonth()+1)+"/"+a.getDate();
     const end=(b.getMonth()+1)+"/"+b.getDate();
     return start+"〜"+end;
+  }
+
+
+  function buildBackup(){
+    const data=load();
+    return {
+      app:"study-timer",
+      version:1,
+      exportedAt:new Date().toISOString(),
+      days:{...data.days}
+    };
+  }
+
+  async function saveBackupFile(){
+    const payload=buildBackup();
+    const json=JSON.stringify(payload,null,2);
+    const filename="study-timer-backup-"+dateKey()+".json";
+    const blob=new Blob([json],{type:"application/json"});
+    const file=new File([blob],filename,{type:"application/json"});
+
+    try{
+      if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+        await navigator.share({files:[file],title:"勉強タイマー バックアップ"});
+        backupMsg.textContent="バックアップを共有・保存しました。";
+        return;
+      }
+    }catch(e){
+      if(e && e.name==="AbortError") return;
+    }
+
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    backupMsg.textContent="バックアップファイルを保存しました。";
+  }
+
+  async function restoreBackupFile(file){
+    if(!file) return;
+    try{
+      const text=await file.text();
+      const parsed=JSON.parse(text);
+      if(!parsed || parsed.app!=="study-timer" || !parsed.days || typeof parsed.days!=="object"){
+        throw new Error("invalid");
+      }
+
+      const data=load();
+      data.days=mergeRecoveredDays(data.days,parsed.days);
+      save(data);
+      backupMsg.textContent="バックアップを復元しました。";
+      render();
+    }catch(e){
+      backupMsg.textContent="このファイルは復元できませんでした。";
+    }finally{
+      restoreInput.value="";
+    }
   }
 
   function render(){
@@ -424,6 +503,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   nextWeekBtn.addEventListener("click",()=>{
     if(selectedWeekOffset<0) selectedWeekOffset+=1;
     render();
+  });
+
+  backupBtn.addEventListener("click",saveBackupFile);
+  restoreBtn.addEventListener("click",()=>restoreInput.click());
+  restoreInput.addEventListener("change",()=>{
+    const file=restoreInput.files && restoreInput.files[0];
+    restoreBackupFile(file);
   });
 
   render();
