@@ -617,6 +617,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       weekMinimums:{[LAST_WEEK_KEY]:LAST_WEEK_MIN_SECONDS},
       health:{},
       periodRanges:[],
+      periodMigrationDone:true,
+      periodRangesUpdatedAt:0,
       activitySessions:[],
       activityRunning:null,
       running:false,
@@ -657,7 +659,17 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     });
 
     merged.health={...remote.health||{},...local.health||{}};
-    merged.periodRanges=normalizePeriodRanges([...(remote.periodRanges||[]),...(local.periodRanges||[])]);
+    const localPeriodTs=Number(local.periodRangesUpdatedAt||0);
+    const remotePeriodTs=Number(remote.periodRangesUpdatedAt||0);
+    if(localPeriodTs||remotePeriodTs){
+      const periodSource=localPeriodTs>=remotePeriodTs?local:remote;
+      merged.periodRanges=normalizePeriodRanges([...(periodSource.periodRanges||[])]);
+      merged.periodRangesUpdatedAt=Math.max(localPeriodTs,remotePeriodTs);
+    }else{
+      merged.periodRanges=normalizePeriodRanges([...(remote.periodRanges||[]),...(local.periodRanges||[])]);
+      merged.periodRangesUpdatedAt=0;
+    }
+    merged.periodMigrationDone=true;
 
     const sessions=[];
     const seen=new Set();
@@ -733,12 +745,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     d.weekMinimums[LAST_WEEK_KEY]=Math.max(Number(d.weekMinimums[LAST_WEEK_KEY]||0),LAST_WEEK_MIN_SECONDS);
     if(!d.health || typeof d.health!=="object") d.health={};
     if(!Array.isArray(d.periodRanges)) d.periodRanges=[];
-    if(d.periodRanges.length===0){
-      const legacyPeriodDates=Object.entries(d.health)
-        .filter(([k,v])=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&v&&v.period)
-        .map(([k])=>k).sort();
-      legacyPeriodDates.forEach(k=>d.periodRanges.push({start:k,end:k}));
+    if(!("periodMigrationDone" in d)){
+      if(d.periodRanges.length===0){
+        const legacyPeriodDates=Object.entries(d.health)
+          .filter(([k,v])=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&v&&v.period)
+          .map(([k])=>k).sort();
+        legacyPeriodDates.forEach(k=>d.periodRanges.push({start:k,end:k}));
+      }
+      d.periodMigrationDone=true;
     }
+    if(!Number.isFinite(Number(d.periodRangesUpdatedAt))) d.periodRangesUpdatedAt=0;
     if(!Array.isArray(d.activitySessions)) d.activitySessions=[];
     if(!("activityRunning" in d)) d.activityRunning=null;
     if(typeof d.running!=="boolean") d.running=false;
@@ -1420,6 +1436,8 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
 
     const ps=periodStartEl.value;
     const pe=periodEndEl.value;
+    const beforeRanges=JSON.stringify(data.periodRanges||[]);
+
     if(ps||pe){
       if(!ps||!pe){
         healthMsgEl.textContent="生理期間は開始日と終了日の両方を入力してください。";
@@ -1432,6 +1450,13 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
       data.periodRanges=(data.periodRanges||[]).filter(r=>!(r.start<=pe&&ps<=r.end));
       data.periodRanges.push({start:ps,end:pe});
       data.periodRanges=normalizePeriodRanges(data.periodRanges);
+    }else{
+      data.periodRanges=(data.periodRanges||[]).filter(r=>!(r.start<=date&&date<=r.end));
+    }
+
+    if(JSON.stringify(data.periodRanges||[])!==beforeRanges){
+      data.periodRangesUpdatedAt=Date.now();
+      data.periodMigrationDone=true;
     }
 
     save(data);
