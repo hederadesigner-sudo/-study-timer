@@ -28,6 +28,34 @@ select{
   background-repeat:no-repeat;
   padding-right:42px!important
 }
+input[type="date"],input[type="time"]{
+  display:block;
+  height:var(--control-h);
+  min-height:var(--control-h);
+  padding-top:0!important;
+  padding-bottom:0!important;
+  line-height:var(--control-h);
+}
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  min-height:var(--control-h);
+  text-align:center;
+  padding:0;
+  margin:0;
+}
+input[type="date"]::-webkit-datetime-edit,
+input[type="time"]::-webkit-datetime-edit{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  padding:0;
+  margin:0;
+}
 body{
   margin:0; min-height:100%; background:var(--bg); color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;
@@ -195,7 +223,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v5</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v6</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。計測中は円グラフ・合計時間・タイムラインがリアルタイムで更新されます。</div>
 
     <div class="life-controls">
