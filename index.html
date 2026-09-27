@@ -99,10 +99,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .month-adjust{text-align:center;font-size:11px;color:var(--muted);min-height:16px;margin-bottom:8px}
 .calendar-head,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
 .calendar-head div{text-align:center;font-size:11px;color:var(--muted);font-weight:700;padding:4px 0}
-.cal-cell{min-width:0;min-height:58px;border:1px solid var(--line);border-radius:10px;padding:6px 3px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+.cal-cell{min-width:0;min-height:58px;border:1px solid var(--line);border-radius:10px;padding:6px 3px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s}
 .cal-cell.empty{border-color:transparent;background:transparent}
 .cal-cell.today{outline:2px solid var(--accent);outline-offset:1px}
 .cal-cell.has-study{background:var(--accent-soft);border-color:#d8d4ff}
+.cal-cell.condition-bad{background:#fff0f1;border-color:#f0a8ae}
+.cal-cell.condition-bad.has-study{background:linear-gradient(135deg,#fff0f1 0 52%,var(--accent-soft) 52% 100%)}
+.cal-cell.selected{box-shadow:0 0 0 2px var(--accent) inset}
 .cal-day{font-size:12px;font-weight:750;line-height:1.2}
 .cal-time{font-size:9px;color:var(--muted);margin-top:7px;line-height:1.15;text-align:center;white-space:nowrap}
 .month-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:9px;text-align:center}
@@ -157,6 +160,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .manual-body{display:flex;flex-direction:column;gap:12px}
 .backup-title{font-size:18px;font-weight:750;margin:0 0 6px}
 .backup-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.backup-grid .secondary{white-space:nowrap;font-size:13px;padding-left:8px;padding-right:8px}
 .backup-msg{margin-top:10px;font-size:12px;color:var(--muted);min-height:18px}
 .hidden-input{display:none}
 .badge{display:inline-flex;align-items:center;gap:6px;margin-top:9px;padding:6px 9px;border-radius:999px;background:var(--accent-soft);font-size:12px;color:var(--text)}
@@ -219,11 +223,11 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       <div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div><div>日</div>
     </div>
     <div class="calendar-grid" id="monthCalendar"></div>
-    <div class="month-note">各日には実際に保存されている時間を表示します。日別の内訳が不明な補正時間は、月合計にのみ反映します。</div>
+    <div class="month-note">日付をタップすると、その日の生活時間・体調記録を表示します。体調1〜2の日は赤系で表示します。日別の内訳が不明な補正時間は月合計にのみ反映します。</div>
   </div>
 
-  <div class="card">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v6</span></div>
+  <div class="card" id="lifeCard">
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v7</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。計測中は円グラフ・合計時間・タイムラインがリアルタイムで更新されます。</div>
 
     <div class="life-controls">
@@ -282,7 +286,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     <div class="timeline-note">過去の勉強時間は合計だけ残っている日があるため、過去分の「何時に勉強したか」は復元できません。これから計測した勉強は時間帯まで残します。</div>
   </div>
 
-  <div class="card">
+  <div class="card" id="healthCard">
     <div class="health-title">体調・生理管理</div>
     <div class="small">日付ごとに体調、生理日、メモを記録できます。睡眠は上の生活時間から計測します。</div>
 
@@ -875,8 +879,31 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       const sec=monthDaySeconds(data,d,live);
       actualMonthSec+=sec;
 
+      const k=dateKey(d);
+      const h=(data.health||{})[k]||null;
+      const selectedKey=lifeDateEl.value||today;
+      const badCondition=!!(h&&Number(h.condition)>0&&Number(h.condition)<=2);
+
       const cell=document.createElement("div");
-      cell.className="cal-cell"+(sec>0?" has-study":"")+(dateKey(d)===today?" today":"");
+      cell.className="cal-cell"
+        +(sec>0?" has-study":"")
+        +(k===today?" today":"")
+        +(badCondition?" condition-bad":"")
+        +(k===selectedKey?" selected":"");
+      cell.setAttribute("role","button");
+      cell.setAttribute("tabindex","0");
+      cell.setAttribute("aria-label",(month+1)+"月"+day+"日");
+      const selectDay=()=>{
+        lifeDateEl.value=k;
+        loadHealthForm(k);
+        render();
+        const target=document.getElementById("lifeCard");
+        if(target) target.scrollIntoView({behavior:"smooth",block:"start"});
+      };
+      cell.addEventListener("click",selectDay);
+      cell.addEventListener("keydown",e=>{
+        if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectDay(); }
+      });
 
       const dayEl=document.createElement("div");
       dayEl.className="cal-day";
@@ -886,12 +913,11 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       timeEl.className="cal-time";
       timeEl.textContent=sec?fmtMin(sec):"";
 
-      const h=(data.health||{})[dateKey(d)]||null;
       const healthEl=document.createElement("div");
       healthEl.className="cal-health";
       {
         const bits=[];
-        const sleepSec=activitySecondsForDate(data,dateKey(d),"sleep");
+        const sleepSec=activitySecondsForDate(data,k,"sleep");
         if(sleepSec>0) bits.push("睡"+fmtMin(sleepSec).replace("時間","h").replace("分","m"));
         if(h&&h.condition) bits.push("体"+h.condition);
         healthEl.textContent=bits.join(" ");
@@ -1185,11 +1211,20 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     render();
   });
 
-  lifeDateEl.addEventListener("change",()=>render());
+  lifeDateEl.addEventListener("change",()=>{
+    const k=lifeDateEl.value||dateKey();
+    loadHealthForm(k);
+    render();
+  });
   lifeToggleBtn.addEventListener("click",toggleLifeActivity);
   addLifeManualBtn.addEventListener("click",addManualLife);
 
-  healthDateEl.addEventListener("change",()=>loadHealthForm(healthDateEl.value||dateKey()));
+  healthDateEl.addEventListener("change",()=>{
+    const k=healthDateEl.value||dateKey();
+    lifeDateEl.value=k;
+    loadHealthForm(k);
+    render();
+  });
   saveHealthBtn.addEventListener("click",saveHealthRecord);
 
   backupBtn.addEventListener("click",saveBackupFile);
