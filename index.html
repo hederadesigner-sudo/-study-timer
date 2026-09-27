@@ -119,6 +119,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const SEEDED_DATE="2026-09-23";
   const SEEDED_SECONDS=146*60;
   const RECOVERED_SECONDS=358*60;
+  const LAST_WEEK_KEY="2026-09-21";
+  const LAST_WEEK_MIN_SECONDS=24*60*60;
 
   const timerEl=document.getElementById("timer");
   const toggleBtn=document.getElementById("toggle");
@@ -149,7 +151,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   }
 
   function defaultData(){
-    return {days:{[SEEDED_DATE]:RECOVERED_SECONDS}, running:false, startedAt:null, runningDate:null};
+    return {
+      days:{[SEEDED_DATE]:RECOVERED_SECONDS},
+      weekMinimums:{[LAST_WEEK_KEY]:LAST_WEEK_MIN_SECONDS},
+      running:false,
+      startedAt:null,
+      runningDate:null
+    };
   }
 
   const LEGACY_KEYS=[
@@ -213,6 +221,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
     if(!d.days) d.days={};
     d.days=recoverLegacyDays(d.days);
+    if(!d.weekMinimums || typeof d.weekMinimums!=="object") d.weekMinimums={};
+    d.weekMinimums[LAST_WEEK_KEY]=Math.max(Number(d.weekMinimums[LAST_WEEK_KEY]||0),LAST_WEEK_MIN_SECONDS);
     if(typeof d.running!=="boolean") d.running=false;
     if(!("startedAt" in d)) d.startedAt=null;
     if(!("runningDate" in d)) d.runningDate=null;
@@ -280,6 +290,25 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return start+"〜"+end;
   }
 
+  function weekKeyFromDays(days){
+    return dateKey(days[0]);
+  }
+
+  function actualWeekSeconds(data,days,live){
+    return days.reduce((sum,d)=>{
+      const k=dateKey(d);
+      let sec=Number(data.days[k]||0);
+      if(data.running && data.runningDate===k) sec+=live;
+      return sum+sec;
+    },0);
+  }
+
+  function effectiveWeekSeconds(data,days,live){
+    const actual=actualWeekSeconds(data,days,live);
+    const floor=Number((data.weekMinimums||{})[weekKeyFromDays(days)]||0);
+    return Math.max(actual,floor);
+  }
+
 
   function buildBackup(){
     const data=load();
@@ -287,7 +316,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       app:"study-timer",
       version:1,
       exportedAt:new Date().toISOString(),
-      days:{...data.days}
+      days:{...data.days},
+      weekMinimums:{...data.weekMinimums}
     };
   }
 
@@ -330,6 +360,15 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
       const data=load();
       data.days=mergeRecoveredDays(data.days,parsed.days);
+      if(parsed.weekMinimums && typeof parsed.weekMinimums==="object"){
+        data.weekMinimums=data.weekMinimums||{};
+        Object.entries(parsed.weekMinimums).forEach(([k,v])=>{
+          const sec=Number(v||0);
+          if(/^\d{4}-\d{2}-\d{2}$/.test(k) && Number.isFinite(sec) && sec>=0){
+            data.weekMinimums[k]=Math.max(Number(data.weekMinimums[k]||0),sec);
+          }
+        });
+      }
       save(data);
       backupMsg.textContent="バックアップを復元しました。";
       render();
@@ -352,16 +391,20 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     blocksCountEl.textContent=Math.floor(todaySec/900);
 
     const currentWeek=weekDays(0);
-    const currentWeekSec=currentWeek.reduce((sum,d)=>{
-      const k=dateKey(d);
-      let sec=Number(data.days[k]||0);
-      if(data.running && data.runningDate===k) sec+=live;
-      return sum+sec;
-    },0);
+    const currentWeekSec=effectiveWeekSeconds(data,currentWeek,live);
     weekTotalEl.textContent=fmtMin(currentWeekSec);
 
     const savedTotalSec=Object.values(data.days).reduce((sum,v)=>sum+Number(v||0),0);
-    allTimeTotalEl.textContent=fmtMin(savedTotalSec+live);
+    let minimumAdjustment=0;
+    Object.entries(data.weekMinimums||{}).forEach(([mondayKey,minSec])=>{
+      const parts=mondayKey.split("-").map(Number);
+      if(parts.length!==3) return;
+      const monday=new Date(parts[0],parts[1]-1,parts[2]);
+      const days=Array.from({length:7},(_,i)=>new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i));
+      const actual=actualWeekSeconds(data,days,live);
+      minimumAdjustment+=Math.max(0,Number(minSec||0)-actual);
+    });
+    allTimeTotalEl.textContent=fmtMin(savedTotalSec+live+minimumAdjustment);
     if(recoveryStatusEl){
       const dayCount=Object.keys(data.days).filter(k=>Number(data.days[k]||0)>0).length;
       recoveryStatusEl.textContent="保存済み記録："+dayCount+"日分";
@@ -444,7 +487,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       chartEl.appendChild(dayEl);
     });
 
-    selectedWeekTotalEl.textContent="この週："+fmtMin(weekSec);
+    const weekFloor=Number((data.weekMinimums||{})[weekKeyFromDays(thisWeek)]||0);
+    const effectiveWeekSec=Math.max(weekSec,weekFloor);
+    selectedWeekTotalEl.textContent="この週："+fmtMin(effectiveWeekSec)+(weekFloor>weekSec?"（補正含む）":"");
   }
 
   function start(){
