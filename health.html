@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f7f9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="勉強タイマー">
+<title>勉強タイマー</title>
+<meta name="build" content="2026-09-28-health-v2">
+<style>
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --text:#172033; --muted:#717b8d;
+  --line:#e2e6ec; --accent:#5146e5; --accent-soft:#eceaff; --block:#5146e5;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; min-height:100%; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif;
+}
+button{font:inherit;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:760px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 14px calc(40px + env(safe-area-inset-bottom))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:14px}
+h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-height:1.45}
+.timer{font-size:50px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:.015em;margin:18px 0 14px;text-align:center}
+.primary{width:100%;min-height:54px;border:0;border-radius:15px;background:var(--accent);color:#fff;font-size:17px;font-weight:750;cursor:pointer}
+.primary.running{background:#171c27}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:13px}
+.stat{padding:13px 10px;border:1px solid var(--line);border-radius:15px;text-align:center;min-width:0}
+.stat strong{display:block;font-size:21px;margin-top:4px;font-variant-numeric:tabular-nums}
+.week-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.week-title h2{font-size:19px;margin:0}
+.week-nav{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center;margin:4px 0 4px}
+.week-nav button{min-height:40px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);font-size:20px;font-weight:700;cursor:pointer}
+.week-nav button:disabled{opacity:.3;cursor:default}
+.week-range{text-align:center;font-size:14px;font-weight:700}
+.week-sum{text-align:center;font-size:13px;color:var(--muted);margin:7px 0 2px}
+.chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;min-height:285px;padding:8px 1px 0}
+.day{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:265px}
+.blocks{width:100%;max-width:44px;height:210px;display:flex;flex-direction:column-reverse;justify-content:flex-start;overflow:hidden}
+.block{width:100%;border-radius:2px;background:var(--block);flex:0 0 auto}
+.block.partial{background:linear-gradient(to top,var(--block) var(--fill),#eef0f4 var(--fill));border:1px solid #d8dbe1}
+.day.today .blocks{outline:2px solid var(--accent-soft);outline-offset:4px;border-radius:5px}
+.minutes{font-size:10px;margin-top:8px;min-height:15px;color:var(--muted);white-space:nowrap;letter-spacing:-.02em}
+.label{margin-top:2px;font-size:12px;font-weight:700}.date{font-size:10px;color:var(--muted)}
+.legend{margin-top:10px;font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
+.actions{display:flex;gap:8px;margin-top:13px}
+.secondary{flex:1;min-height:46px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--text);font-size:14px;font-weight:650;cursor:pointer}
+.note{font-size:12px;line-height:1.65;color:var(--muted);padding:0 3px}
+.month-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+.month-title h2{font-size:19px;margin:0}
+.month-nav{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center;margin-bottom:8px}
+.month-nav button{min-height:40px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);font-size:20px;font-weight:700;cursor:pointer}
+.month-nav button:disabled{opacity:.3;cursor:default}
+.month-label{text-align:center;font-size:15px;font-weight:750}
+.month-total{text-align:center;font-size:14px;font-weight:750;margin:4px 0 2px}
+.month-adjust{text-align:center;font-size:11px;color:var(--muted);min-height:16px;margin-bottom:8px}
+.calendar-head,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.calendar-head div{text-align:center;font-size:11px;color:var(--muted);font-weight:700;padding:4px 0}
+.cal-cell{min-width:0;min-height:58px;border:1px solid var(--line);border-radius:10px;padding:6px 3px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+.cal-cell.empty{border-color:transparent;background:transparent}
+.cal-cell.today{outline:2px solid var(--accent);outline-offset:1px}
+.cal-cell.has-study{background:var(--accent-soft);border-color:#d8d4ff}
+.cal-day{font-size:12px;font-weight:750;line-height:1.2}
+.cal-time{font-size:9px;color:var(--muted);margin-top:7px;line-height:1.15;text-align:center;white-space:nowrap}
+.month-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:9px;text-align:center}
+.health-title{font-size:19px;font-weight:750;margin:0 0 6px}
+.health-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field.full{grid-column:1/-1}
+.field label{font-size:12px;color:var(--muted);font-weight:700}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);font:inherit;padding:11px 10px;min-height:44px}
+.field textarea{min-height:76px;resize:vertical}
+.checkline{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:12px}
+.health-summary{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:13px;line-height:1.55}
+.health-msg{margin-top:8px;font-size:12px;color:var(--muted);min-height:18px}
+.cal-health{font-size:8px;line-height:1.2;margin-top:3px;text-align:center;color:var(--text)}
+.period-mark{font-size:8px;font-weight:750;margin-top:2px}
+.backup-title{font-size:18px;font-weight:750;margin:0 0 6px}
+.backup-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.backup-msg{margin-top:10px;font-size:12px;color:var(--muted);min-height:18px}
+.hidden-input{display:none}
+.badge{display:inline-flex;align-items:center;gap:6px;margin-top:9px;padding:6px 9px;border-radius:999px;background:var(--accent-soft);font-size:12px;color:var(--text)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+@media(min-width:600px){
+  .stats{grid-template-columns:repeat(4,1fr)}
+  .blocks{max-width:56px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>勉強タイマー</h1>
+    <div class="small">「勉強開始」を押して、終わったら停止。15分ごとに今日の列が1ブロック伸びます。</div>
+    <div class="badge" id="statusBadge"><span class="dot"></span><span id="statusText">停止中</span></div>
+    <div class="timer" id="timer">00:00:00</div>
+    <button class="primary" id="toggle" type="button">▶ 勉強開始</button>
+
+    <div class="stats">
+      <div class="stat"><span class="small">今日</span><strong id="todayTotal">0分</strong></div>
+      <div class="stat"><span class="small">今週</span><strong id="weekTotal">0分</strong></div>
+      <div class="stat"><span class="small">総勉強時間</span><strong id="allTimeTotal">0分</strong></div>
+      <div class="stat"><span class="small">今日の15分ブロック</span><strong id="blocksCount">0</strong></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="week-title">
+      <h2>週ごとの勉強</h2>
+      <div class="small">1ブロック＝15分</div>
+    </div>
+    <div class="week-nav">
+      <button id="prevWeek" type="button" aria-label="前の週">‹</button>
+      <div class="week-range" id="weekRange">-</div>
+      <button id="nextWeek" type="button" aria-label="次の週">›</button>
+    </div>
+    <div class="week-sum" id="selectedWeekTotal">この週：0分</div>
+    <div class="chart" id="chart"></div>
+    <div class="legend">15分未満の途中分も表示します。24時間（96ブロック）まで対応し、その週の最大時間に合わせて自動で見やすく調整します。</div>
+    <div class="actions">
+      <button class="secondary" id="minus15" type="button">−15分</button>
+      <button class="secondary" id="plus15" type="button">＋15分</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="month-title">
+      <h2>月ごとの勉強</h2>
+      <div class="small">日別カレンダー</div>
+    </div>
+    <div class="month-nav">
+      <button id="prevMonth" type="button" aria-label="前の月">‹</button>
+      <div class="month-label" id="monthLabel">-</div>
+      <button id="nextMonth" type="button" aria-label="次の月">›</button>
+    </div>
+    <div class="month-total" id="monthTotal">この月：0分</div>
+    <div class="month-adjust" id="monthAdjust"></div>
+    <div class="calendar-head">
+      <div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div><div>日</div>
+    </div>
+    <div class="calendar-grid" id="monthCalendar"></div>
+    <div class="month-note">各日には実際に保存されている時間を表示します。日別の内訳が不明な補正時間は、月合計にのみ反映します。</div>
+  </div>
+
+  <div class="card">
+    <div class="health-title">睡眠・体調管理</div>
+    <div class="small">日付ごとに睡眠時間、体調、生理日、メモを記録できます。</div>
+
+    <div class="health-grid">
+      <div class="field full">
+        <label for="healthDate">日付</label>
+        <input id="healthDate" type="date">
+      </div>
+
+      <div class="field">
+        <label for="sleepStart">就寝</label>
+        <input id="sleepStart" type="time">
+      </div>
+      <div class="field">
+        <label for="sleepEnd">起床</label>
+        <input id="sleepEnd" type="time">
+      </div>
+
+      <div class="field">
+        <label for="condition">体調</label>
+        <select id="condition">
+          <option value="">未記録</option>
+          <option value="1">1 かなり悪い</option>
+          <option value="2">2 悪い</option>
+          <option value="3">3 普通</option>
+          <option value="4">4 良い</option>
+          <option value="5">5 とても良い</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>生理</label>
+        <label class="checkline"><input id="periodDay" type="checkbox"> 生理日</label>
+      </div>
+
+      <div class="field full">
+        <label for="healthMemo">体調メモ</label>
+        <textarea id="healthMemo" placeholder="頭痛、だるさ、気分など"></textarea>
+      </div>
+    </div>
+
+    <div class="health-summary" id="healthSummary">睡眠時間：未記録</div>
+    <button class="primary" id="saveHealth" type="button" style="margin-top:10px">記録を保存</button>
+    <div class="health-msg" id="healthMsg"></div>
+  </div>
+
+  <div class="card">
+    <div class="backup-title">データのバックアップ</div>
+    <div class="small">勉強記録をJSONファイルとして保存しておけば、Webアプリを削除した場合や機種変更後でも復元できます。</div>
+    <div class="backup-grid">
+      <button class="secondary" id="backupBtn" type="button">バックアップを保存</button>
+      <button class="secondary" id="restoreBtn" type="button">バックアップから復元</button>
+    </div>
+    <input class="hidden-input" id="restoreInput" type="file" accept=".json,application/json">
+    <div class="backup-msg" id="backupMsg"></div>
+  </div>
+
+  <div class="note">
+    記録はこの端末のSafari / Webアプリ内に保存されます。ページを閉じても、計測中なら開始時刻を保持し、次に開いたときに経過時間を反映します。
+    <div id="recoveryStatus" style="margin-top:6px"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const KEY="study_timer_15min_v5";
+  const SEEDED_DATE="2026-09-23";
+  const SEEDED_SECONDS=146*60;
+  const RECOVERED_SECONDS=358*60;
+  const LAST_WEEK_KEY="2026-09-21";
+  const LAST_WEEK_MIN_SECONDS=24*60*60;
+
+  const timerEl=document.getElementById("timer");
+  const toggleBtn=document.getElementById("toggle");
+  const todayTotalEl=document.getElementById("todayTotal");
+  const blocksCountEl=document.getElementById("blocksCount");
+  const weekTotalEl=document.getElementById("weekTotal");
+  const allTimeTotalEl=document.getElementById("allTimeTotal");
+  const weekRangeEl=document.getElementById("weekRange");
+  const selectedWeekTotalEl=document.getElementById("selectedWeekTotal");
+  const prevWeekBtn=document.getElementById("prevWeek");
+  const nextWeekBtn=document.getElementById("nextWeek");
+  const chartEl=document.getElementById("chart");
+  const minusBtn=document.getElementById("minus15");
+  const plusBtn=document.getElementById("plus15");
+  const statusText=document.getElementById("statusText");
+  const recoveryStatusEl=document.getElementById("recoveryStatus");
+  const backupBtn=document.getElementById("backupBtn");
+  const restoreBtn=document.getElementById("restoreBtn");
+  const restoreInput=document.getElementById("restoreInput");
+  const backupMsg=document.getElementById("backupMsg");
+  const prevMonthBtn=document.getElementById("prevMonth");
+  const nextMonthBtn=document.getElementById("nextMonth");
+  const monthLabelEl=document.getElementById("monthLabel");
+  const monthTotalEl=document.getElementById("monthTotal");
+  const monthAdjustEl=document.getElementById("monthAdjust");
+  const monthCalendarEl=document.getElementById("monthCalendar");
+  const healthDateEl=document.getElementById("healthDate");
+  const sleepStartEl=document.getElementById("sleepStart");
+  const sleepEndEl=document.getElementById("sleepEnd");
+  const conditionEl=document.getElementById("condition");
+  const periodDayEl=document.getElementById("periodDay");
+  const healthMemoEl=document.getElementById("healthMemo");
+  const healthSummaryEl=document.getElementById("healthSummary");
+  const healthMsgEl=document.getElementById("healthMsg");
+  const saveHealthBtn=document.getElementById("saveHealth");
+  let selectedWeekOffset=0;
+  let selectedMonthOffset=0;
+
+  function dateKey(d=new Date()){
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,"0");
+    const day=String(d.getDate()).padStart(2,"0");
+    return y+"-"+m+"-"+day;
+  }
+
+  function defaultData(){
+    return {
+      days:{[SEEDED_DATE]:RECOVERED_SECONDS},
+      weekMinimums:{[LAST_WEEK_KEY]:LAST_WEEK_MIN_SECONDS},
+      health:{},
+      running:false,
+      startedAt:null,
+      runningDate:null
+    };
+  }
+
+  const LEGACY_KEYS=[
+    "study_timer_15min_v1",
+    "study_timer_15min_v2",
+    "study_timer_15min_v3",
+    "study_timer_15min_v4",
+    "study_timer_15min_v5",
+    "study_timer_15min_v6",
+    "study_timer_v6"
+  ];
+
+  function mergeRecoveredDays(target, source){
+    if(!source || typeof source!=="object") return target;
+    Object.entries(source).forEach(([k,v])=>{
+      const sec=Number(v||0);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(k) || !Number.isFinite(sec) || sec<0) return;
+      target[k]=Math.max(Number(target[k]||0),sec);
+    });
+    return target;
+  }
+
+  function recoverLegacyDays(baseDays){
+    const recovered={...baseDays};
+
+    LEGACY_KEYS.forEach(key=>{
+      try{
+        const raw=localStorage.getItem(key);
+        if(!raw) return;
+        const obj=JSON.parse(raw);
+        if(obj && obj.days) mergeRecoveredDays(recovered,obj.days);
+      }catch(e){}
+    });
+
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const key=localStorage.key(i);
+        if(!key || !key.startsWith("study-grid-")) continue;
+        const d=key.slice("study-grid-".length);
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+        const arr=JSON.parse(localStorage.getItem(key));
+        if(!Array.isArray(arr)) continue;
+        const sec=arr.filter(Boolean).length*900;
+        recovered[d]=Math.max(Number(recovered[d]||0),sec);
+      }
+    }catch(e){}
+
+    recovered[SEEDED_DATE]=Math.max(Number(recovered[SEEDED_DATE]||0),RECOVERED_SECONDS);
+    return recovered;
+  }
+
+  function load(){
+    let d=defaultData();
+    try{
+      const raw=localStorage.getItem(KEY);
+      if(raw){
+        const parsed=JSON.parse(raw);
+        if(parsed && typeof parsed==="object") d=parsed;
+      }
+    }catch(e){}
+
+    if(!d.days) d.days={};
+    d.days=recoverLegacyDays(d.days);
+    if(!d.weekMinimums || typeof d.weekMinimums!=="object") d.weekMinimums={};
+    d.weekMinimums[LAST_WEEK_KEY]=Math.max(Number(d.weekMinimums[LAST_WEEK_KEY]||0),LAST_WEEK_MIN_SECONDS);
+    if(!d.health || typeof d.health!=="object") d.health={};
+    if(typeof d.running!=="boolean") d.running=false;
+    if(!("startedAt" in d)) d.startedAt=null;
+    if(!("runningDate" in d)) d.runningDate=null;
+
+    try{ localStorage.setItem(KEY,JSON.stringify(d)); }catch(e){}
+    return d;
+  }
+
+  function save(data){
+    try{ localStorage.setItem(KEY,JSON.stringify(data)); }catch(e){}
+  }
+
+  function fmtMin(sec){
+    const totalMin=Math.floor(Math.max(0,sec)/60);
+    if(totalMin<60) return totalMin+"分";
+    const h=Math.floor(totalMin/60),m=totalMin%60;
+    return m ? h+"時間"+m+"分" : h+"時間";
+  }
+
+  function fmtClock(sec){
+    sec=Math.max(0,Math.floor(sec));
+    const h=String(Math.floor(sec/3600)).padStart(2,"0");
+    const m=String(Math.floor((sec%3600)/60)).padStart(2,"0");
+    const s=String(sec%60).padStart(2,"0");
+    return h+":"+m+":"+s;
+  }
+
+  function currentLiveSeconds(data){
+    if(!data.running || !data.startedAt) return 0;
+    return Math.max(0,Math.floor((Date.now()-data.startedAt)/1000));
+  }
+
+  function splitRunningAcrossMidnight(data){
+    if(!data.running || !data.startedAt || !data.runningDate) return data;
+    const start=new Date(data.startedAt);
+    const now=new Date();
+    if(dateKey(start)===dateKey(now)) return data;
+
+    let cursor=new Date(start);
+    while(dateKey(cursor)!==dateKey(now)){
+      const nextMidnight=new Date(cursor.getFullYear(),cursor.getMonth(),cursor.getDate()+1);
+      const sec=Math.max(0,Math.floor((nextMidnight-cursor)/1000));
+      const k=dateKey(cursor);
+      data.days[k]=Number(data.days[k]||0)+sec;
+      cursor=nextMidnight;
+    }
+    data.startedAt=cursor.getTime();
+    data.runningDate=dateKey(cursor);
+    save(data);
+    return data;
+  }
+
+  function weekDays(offset=0){
+    const now=new Date();
+    const day=(now.getDay()+6)%7;
+    const monday=new Date(now.getFullYear(),now.getMonth(),now.getDate()-day+(offset*7));
+    return Array.from({length:7},(_,i)=>new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i));
+  }
+
+  function weekRangeLabel(days){
+    const a=days[0], b=days[6];
+    const sameYear=a.getFullYear()===b.getFullYear();
+    const start=sameYear ? (a.getMonth()+1)+"/"+a.getDate() : a.getFullYear()+"/"+(a.getMonth()+1)+"/"+a.getDate();
+    const end=(b.getMonth()+1)+"/"+b.getDate();
+    return start+"〜"+end;
+  }
+
+  function weekKeyFromDays(days){
+    return dateKey(days[0]);
+  }
+
+  function actualWeekSeconds(data,days,live){
+    return days.reduce((sum,d)=>{
+      const k=dateKey(d);
+      let sec=Number(data.days[k]||0);
+      if(data.running && data.runningDate===k) sec+=live;
+      return sum+sec;
+    },0);
+  }
+
+  function effectiveWeekSeconds(data,days,live){
+    const actual=actualWeekSeconds(data,days,live);
+    const floor=Number((data.weekMinimums||{})[weekKeyFromDays(days)]||0);
+    return Math.max(actual,floor);
+  }
+
+
+  function sleepSeconds(start,end){
+    if(!start || !end) return 0;
+    const [sh,sm]=start.split(":").map(Number);
+    const [eh,em]=end.split(":").map(Number);
+    let a=sh*60+sm, b=eh*60+em;
+    if(b<a) b+=24*60;
+    return Math.max(0,(b-a)*60);
+  }
+
+  function loadHealthForm(date){
+    const data=load();
+    const h=(data.health||{})[date]||{};
+    healthDateEl.value=date;
+    sleepStartEl.value=h.sleepStart||"";
+    sleepEndEl.value=h.sleepEnd||"";
+    conditionEl.value=h.condition?String(h.condition):"";
+    periodDayEl.checked=!!h.period;
+    healthMemoEl.value=h.memo||"";
+    updateHealthSummary();
+    healthMsgEl.textContent="";
+  }
+
+  function updateHealthSummary(){
+    const sec=sleepSeconds(sleepStartEl.value,sleepEndEl.value);
+    const parts=[];
+    parts.push("睡眠時間："+(sec?fmtMin(sec):"未記録"));
+    if(conditionEl.value) parts.push("体調："+conditionEl.options[conditionEl.selectedIndex].text);
+    if(periodDayEl.checked) parts.push("生理日");
+    healthSummaryEl.textContent=parts.join(" / ");
+  }
+
+  function saveHealthRecord(){
+    const date=healthDateEl.value||dateKey();
+    const data=load();
+    data.health=data.health||{};
+    const sec=sleepSeconds(sleepStartEl.value,sleepEndEl.value);
+    data.health[date]={
+      sleepStart:sleepStartEl.value||"",
+      sleepEnd:sleepEndEl.value||"",
+      sleepSeconds:sec,
+      condition:conditionEl.value?Number(conditionEl.value):null,
+      period:periodDayEl.checked,
+      memo:(healthMemoEl.value||"").trim()
+    };
+    save(data);
+    healthMsgEl.textContent="保存しました。";
+    render();
+  }
+
+  function monthBase(offset=0){
+    const now=new Date();
+    return new Date(now.getFullYear(),now.getMonth()+offset,1);
+  }
+
+  function monthDaySeconds(data,d,live){
+    const k=dateKey(d);
+    let sec=Number(data.days[k]||0);
+    if(data.running && data.runningDate===k) sec+=live;
+    return sec;
+  }
+
+  function monthAdjustmentSeconds(data,year,month,live){
+    let adjustment=0;
+    Object.entries(data.weekMinimums||{}).forEach(([mondayKey,minSec])=>{
+      const p=mondayKey.split("-").map(Number);
+      if(p.length!==3) return;
+      const monday=new Date(p[0],p[1]-1,p[2]);
+      const days=Array.from({length:7},(_,i)=>new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i));
+      const fullyInside=days.every(d=>d.getFullYear()===year && d.getMonth()===month);
+      if(!fullyInside) return;
+      const actual=actualWeekSeconds(data,days,live);
+      adjustment+=Math.max(0,Number(minSec||0)-actual);
+    });
+    return adjustment;
+  }
+
+  function renderMonthCalendar(data,live,today){
+    const base=monthBase(selectedMonthOffset);
+    const year=base.getFullYear(), month=base.getMonth();
+    monthLabelEl.textContent=year+"年"+(month+1)+"月";
+    nextMonthBtn.disabled=selectedMonthOffset>=0;
+    monthCalendarEl.innerHTML="";
+
+    const firstDay=(base.getDay()+6)%7;
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    let actualMonthSec=0;
+
+    for(let i=0;i<firstDay;i++){
+      const empty=document.createElement("div");
+      empty.className="cal-cell empty";
+      monthCalendarEl.appendChild(empty);
+    }
+
+    for(let day=1;day<=daysInMonth;day++){
+      const d=new Date(year,month,day);
+      const sec=monthDaySeconds(data,d,live);
+      actualMonthSec+=sec;
+
+      const cell=document.createElement("div");
+      cell.className="cal-cell"+(sec>0?" has-study":"")+(dateKey(d)===today?" today":"");
+
+      const dayEl=document.createElement("div");
+      dayEl.className="cal-day";
+      dayEl.textContent=day;
+
+      const timeEl=document.createElement("div");
+      timeEl.className="cal-time";
+      timeEl.textContent=sec?fmtMin(sec):"";
+
+      const h=(data.health||{})[dateKey(d)]||null;
+      const healthEl=document.createElement("div");
+      healthEl.className="cal-health";
+      if(h){
+        const bits=[];
+        if(Number(h.sleepSeconds||0)>0) bits.push("睡"+fmtMin(Number(h.sleepSeconds||0)).replace("時間","h").replace("分","m"));
+        if(h.condition) bits.push("体"+h.condition);
+        healthEl.textContent=bits.join(" ");
+      }
+
+      const periodEl=document.createElement("div");
+      periodEl.className="period-mark";
+      periodEl.textContent=h&&h.period?"生理":"";
+
+      cell.append(dayEl,timeEl,healthEl,periodEl);
+      monthCalendarEl.appendChild(cell);
+    }
+
+    const adjustment=monthAdjustmentSeconds(data,year,month,live);
+    monthTotalEl.textContent="この月："+fmtMin(actualMonthSec+adjustment);
+    monthAdjustEl.textContent=adjustment>0?"週補正 ＋"+fmtMin(adjustment)+"を含む":"";
+  }
+
+  function buildBackup(){
+    const data=load();
+    return {
+      app:"study-timer",
+      version:1,
+      exportedAt:new Date().toISOString(),
+      days:{...data.days},
+      weekMinimums:{...data.weekMinimums},
+      health:{...data.health}
+    };
+  }
+
+  async function saveBackupFile(){
+    const payload=buildBackup();
+    const json=JSON.stringify(payload,null,2);
+    const filename="study-timer-backup-"+dateKey()+".json";
+    const blob=new Blob([json],{type:"application/json"});
+    const file=new File([blob],filename,{type:"application/json"});
+
+    try{
+      if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+        await navigator.share({files:[file],title:"勉強タイマー バックアップ"});
+        backupMsg.textContent="バックアップを共有・保存しました。";
+        return;
+      }
+    }catch(e){
+      if(e && e.name==="AbortError") return;
+    }
+
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    backupMsg.textContent="バックアップファイルを保存しました。";
+  }
+
+  async function restoreBackupFile(file){
+    if(!file) return;
+    try{
+      const text=await file.text();
+      const parsed=JSON.parse(text);
+      if(!parsed || parsed.app!=="study-timer" || !parsed.days || typeof parsed.days!=="object"){
+        throw new Error("invalid");
+      }
+
+      const data=load();
+      data.days=mergeRecoveredDays(data.days,parsed.days);
+      if(parsed.weekMinimums && typeof parsed.weekMinimums==="object"){
+        data.weekMinimums=data.weekMinimums||{};
+        Object.entries(parsed.weekMinimums).forEach(([k,v])=>{
+          const sec=Number(v||0);
+          if(/^\d{4}-\d{2}-\d{2}$/.test(k) && Number.isFinite(sec) && sec>=0){
+            data.weekMinimums[k]=Math.max(Number(data.weekMinimums[k]||0),sec);
+          }
+        });
+      }
+      if(parsed.health && typeof parsed.health==="object"){
+        data.health=data.health||{};
+        Object.entries(parsed.health).forEach(([k,v])=>{
+          if(/^\d{4}-\d{2}-\d{2}$/.test(k) && v && typeof v==="object"){
+            data.health[k]={...(data.health[k]||{}),...v};
+          }
+        });
+      }
+      save(data);
+      backupMsg.textContent="バックアップを復元しました。";
+      render();
+    }catch(e){
+      backupMsg.textContent="このファイルは復元できませんでした。";
+    }finally{
+      restoreInput.value="";
+    }
+  }
+
+  function render(){
+    let data=splitRunningAcrossMidnight(load());
+    const live=currentLiveSeconds(data);
+    const today=dateKey();
+    const liveToday=data.running && data.runningDate===today ? live : 0;
+    const todaySec=Number(data.days[today]||0)+liveToday;
+
+    timerEl.textContent=fmtClock(live);
+    todayTotalEl.textContent=fmtMin(todaySec);
+    blocksCountEl.textContent=Math.floor(todaySec/900);
+
+    const currentWeek=weekDays(0);
+    const currentWeekSec=effectiveWeekSeconds(data,currentWeek,live);
+    weekTotalEl.textContent=fmtMin(currentWeekSec);
+
+    const savedTotalSec=Object.values(data.days).reduce((sum,v)=>sum+Number(v||0),0);
+    let minimumAdjustment=0;
+    Object.entries(data.weekMinimums||{}).forEach(([mondayKey,minSec])=>{
+      const parts=mondayKey.split("-").map(Number);
+      if(parts.length!==3) return;
+      const monday=new Date(parts[0],parts[1]-1,parts[2]);
+      const days=Array.from({length:7},(_,i)=>new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i));
+      const actual=actualWeekSeconds(data,days,live);
+      minimumAdjustment+=Math.max(0,Number(minSec||0)-actual);
+    });
+    allTimeTotalEl.textContent=fmtMin(savedTotalSec+live+minimumAdjustment);
+    if(recoveryStatusEl){
+      const dayCount=Object.keys(data.days).filter(k=>Number(data.days[k]||0)>0).length;
+      recoveryStatusEl.textContent="保存済み記録："+dayCount+"日分";
+    }
+
+    renderMonthCalendar(data,live,today);
+    if(!healthDateEl.value) loadHealthForm(today);
+
+    if(data.running){
+      toggleBtn.textContent="■ 勉強終了";
+      toggleBtn.classList.add("running");
+      statusText.textContent="計測中";
+    }else{
+      toggleBtn.textContent="▶ 勉強開始";
+      toggleBtn.classList.remove("running");
+      statusText.textContent="停止中";
+    }
+
+    chartEl.innerHTML="";
+    let weekSec=0;
+    const labels=["月","火","水","木","金","土","日"];
+    const thisWeek=weekDays(selectedWeekOffset);
+    weekRangeEl.textContent=weekRangeLabel(thisWeek);
+    nextWeekBtn.disabled=selectedWeekOffset>=0;
+    const weekValues=thisWeek.map(d=>{
+      const k=dateKey(d);
+      let sec=Number(data.days[k]||0);
+      if(data.running && data.runningDate===k) sec+=live;
+      return sec;
+    });
+
+    const maxSec=Math.max(0,...weekValues);
+    const maxBlocks=Math.min(96,Math.ceil(maxSec/900));
+    const displayBlocks=Math.max(12,maxBlocks||12);
+    const gap=displayBlocks<=24?3:(displayBlocks<=48?2:1);
+    const blockHeight=Math.max(1,Math.floor((210-gap*(displayBlocks-1))/displayBlocks));
+
+    thisWeek.forEach((d,i)=>{
+      const k=dateKey(d);
+      let sec=weekValues[i];
+      weekSec+=sec;
+
+      const full=Math.floor(sec/900);
+      const rem=sec%900;
+
+      const dayEl=document.createElement("div");
+      dayEl.className="day"+(k===today?" today":"");
+
+      const blocks=document.createElement("div");
+      blocks.className="blocks";
+      blocks.style.gap=gap+"px";
+
+      const shown=Math.min(full,displayBlocks);
+      for(let j=0;j<shown;j++){
+        const b=document.createElement("div");
+        b.className="block";
+        b.style.height=blockHeight+"px";
+        b.style.minHeight=blockHeight+"px";
+        blocks.appendChild(b);
+      }
+      if(rem>0 && full<displayBlocks){
+        const b=document.createElement("div");
+        b.className="block partial";
+        b.style.height=blockHeight+"px";
+        b.style.minHeight=blockHeight+"px";
+        b.style.setProperty("--fill",Math.round(rem/900*100)+"%");
+        blocks.appendChild(b);
+      }
+
+      const minutes=document.createElement("div");
+      minutes.className="minutes";
+      minutes.textContent=sec?fmtMin(sec):"0分";
+
+      const label=document.createElement("div");
+      label.className="label";
+      label.textContent=labels[i];
+
+      const date=document.createElement("div");
+      date.className="date";
+      date.textContent=(d.getMonth()+1)+"/"+d.getDate();
+
+      dayEl.append(blocks,minutes,label,date);
+      chartEl.appendChild(dayEl);
+    });
+
+    const weekFloor=Number((data.weekMinimums||{})[weekKeyFromDays(thisWeek)]||0);
+    const effectiveWeekSec=Math.max(weekSec,weekFloor);
+    selectedWeekTotalEl.textContent="この週："+fmtMin(effectiveWeekSec)+(weekFloor>weekSec?"（補正含む）":"");
+  }
+
+  function start(){
+    const data=load();
+    if(data.running) return;
+    data.running=true;
+    data.startedAt=Date.now();
+    data.runningDate=dateKey();
+    save(data);
+    render();
+  }
+
+  function stop(){
+    let data=splitRunningAcrossMidnight(load());
+    if(!data.running) return;
+    const sec=currentLiveSeconds(data);
+    const k=data.runningDate || dateKey();
+    data.days[k]=Number(data.days[k]||0)+sec;
+    data.running=false;
+    data.startedAt=null;
+    data.runningDate=null;
+    save(data);
+    render();
+  }
+
+  toggleBtn.addEventListener("click",()=>{
+    const data=load();
+    data.running?stop():start();
+  });
+
+  plusBtn.addEventListener("click",()=>{
+    let data=load();
+    if(data.running) stop();
+    data=load();
+    const k=dateKey();
+    data.days[k]=Number(data.days[k]||0)+900;
+    save(data);
+    render();
+  });
+
+  minusBtn.addEventListener("click",()=>{
+    let data=load();
+    if(data.running) stop();
+    data=load();
+    const k=dateKey();
+    data.days[k]=Math.max(0,Number(data.days[k]||0)-900);
+    save(data);
+    render();
+  });
+
+  prevWeekBtn.addEventListener("click",()=>{
+    selectedWeekOffset-=1;
+    render();
+  });
+
+  nextWeekBtn.addEventListener("click",()=>{
+    if(selectedWeekOffset<0) selectedWeekOffset+=1;
+    render();
+  });
+
+  prevMonthBtn.addEventListener("click",()=>{
+    selectedMonthOffset-=1;
+    render();
+  });
+
+  nextMonthBtn.addEventListener("click",()=>{
+    if(selectedMonthOffset<0) selectedMonthOffset+=1;
+    render();
+  });
+
+  healthDateEl.addEventListener("change",()=>loadHealthForm(healthDateEl.value||dateKey()));
+  sleepStartEl.addEventListener("input",updateHealthSummary);
+  sleepEndEl.addEventListener("input",updateHealthSummary);
+  conditionEl.addEventListener("change",updateHealthSummary);
+  periodDayEl.addEventListener("change",updateHealthSummary);
+  saveHealthBtn.addEventListener("click",saveHealthRecord);
+
+  backupBtn.addEventListener("click",saveBackupFile);
+  restoreBtn.addEventListener("click",()=>restoreInput.click());
+  restoreInput.addEventListener("change",()=>{
+    const file=restoreInput.files && restoreInput.files[0];
+    restoreBackupFile(file);
+  });
+
+  render();
+  setInterval(render,500);
+})();
+</script>
+</body>
+</html>
