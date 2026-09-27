@@ -855,6 +855,23 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     await reconcileCloud();
   }
 
+  function setSignupCooldown(seconds){
+    let remaining=Math.max(1,Math.ceil(Number(seconds)||60));
+    cloudSignUpBtn.disabled=true;
+    const originalLabel="新規登録";
+    cloudSignUpBtn.textContent="再試行まで "+remaining+"秒";
+    const timer=setInterval(()=>{
+      remaining-=1;
+      if(remaining<=0){
+        clearInterval(timer);
+        cloudSignUpBtn.disabled=false;
+        cloudSignUpBtn.textContent=originalLabel;
+        return;
+      }
+      cloudSignUpBtn.textContent="再試行まで "+remaining+"秒";
+    },1000);
+  }
+
   async function cloudSignUp(){
     if(!cloudClient) return;
     const email=(cloudEmailEl.value||"").trim();
@@ -866,15 +883,24 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     setCloudStatus("アカウントを作成中…");
     const {data,error}=await cloudClient.auth.signUp({email,password});
     if(error){
-      setCloudStatus("新規登録できませんでした："+error.message);
+      const msg=String(error.message||"");
+      const waitMatch=msg.match(/after\s+(\d+)\s+seconds?/i);
+      if(waitMatch){
+        const sec=Number(waitMatch[1])||60;
+        setSignupCooldown(sec);
+        setCloudStatus("連続で登録操作が行われたため、一時的に制限されています。"+sec+"秒待ってから「新規登録」を押してください。");
+      }else{
+        setCloudStatus("新規登録できませんでした："+msg);
+      }
       return;
     }
+    setSignupCooldown(60);
     if(data.session&&data.user){
       cloudUser=data.user;
       setCloudUi();
       await reconcileCloud();
     }else{
-      setCloudStatus("確認メールを送信しました。メール認証後、この画面に戻ってログインしてください。");
+      setCloudStatus("確認メールを送信しました。メール内のリンクで認証後、この画面に戻ってログインしてください。");
     }
   }
 
