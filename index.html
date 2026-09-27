@@ -252,7 +252,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v13</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v14</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。計測中は円グラフ・合計時間・タイムラインがリアルタイムで更新されます。</div>
 
     <div class="life-controls">
@@ -530,6 +530,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
   function save(data){
     try{ localStorage.setItem(KEY,JSON.stringify(data)); }catch(e){}
+  }
+
+  function fmtCompactHM(sec){
+    sec=Math.max(0,Number(sec)||0);
+    const totalMin=Math.floor(sec/60);
+    const h=Math.floor(totalMin/60);
+    const m=totalMin%60;
+    if(h>0 && m>0) return h+"h"+m+"m";
+    if(h>0) return h+"h";
+    return m+"m";
   }
 
   function fmtMin(sec){
@@ -989,14 +999,14 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
       const timeEl=document.createElement("div");
       timeEl.className="cal-time";
-      timeEl.textContent=sec?fmtMin(sec):"";
+      timeEl.textContent=sec?("勉"+fmtCompactHM(sec)):"";
 
       const healthEl=document.createElement("div");
       healthEl.className="cal-health";
       {
         const bits=[];
         const sleepSec=activitySecondsForDate(data,k,"sleep");
-        if(sleepSec>0) bits.push("睡"+fmtMin(sleepSec).replace("時間","h").replace("分","m"));
+        if(sleepSec>0) bits.push("睡"+fmtCompactHM(sleepSec));
         if(h&&h.condition) bits.push("体"+h.condition);
         healthEl.textContent=bits.join(" ");
       }
