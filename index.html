@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="勉強タイマー">
-<meta name="app-build" content="2026-10-24-root-live-v17-40">
+<meta name="app-build" content="2026-10-24-root-live-v17-41">
 <title>勉強タイマー</title>
 <script>
 window.addEventListener("pageshow",function(e){
@@ -505,6 +505,11 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         <div class="study-month-history" id="studyMonthHistory"></div>
       </div>
     </details>
+    <details class="manual-entry study-month-history-entry">
+      <summary>勉強の目標時間を設定</summary>
+      <div class="manual-body"><div class="study-month-history" id="studyGoalsPanel"></div>
+      </div>
+    </details>
   </div>
 
   <div class="card">
@@ -567,7 +572,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.40</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.41</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -1799,6 +1804,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
   function renderStudyMonthHistory(data,live){
     studyMonthHistoryEl.innerHTML="";
+    const goalsPanel=document.getElementById("studyGoalsPanel");
+    if(goalsPanel) goalsPanel.innerHTML="";
     const months=new Set();
     Object.keys(data.days||{}).forEach(k=>{
       if(/^\d{4}-\d{2}-\d{2}$/.test(k)) months.add(k.slice(0,7));
@@ -1885,7 +1892,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       summary.append(sub,progressBar(cumulative,overallGoal,"累計目標の達成率"));
     }
     summary.appendChild(goalEditor("累計目標を設定",overallGoal,value=>saveGoals(fresh=>{fresh.studyOverallGoalHours=value;})));
-    studyMonthHistoryEl.appendChild(summary);
+    if(goalsPanel)goalsPanel.appendChild(summary);
 
     rows.forEach(item=>{
       const goal=Number(goals[item.ym])||0;
@@ -1900,17 +1907,21 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       row.append(label,total);
       if(goal>0){
         row.appendChild(progressBar(item.total,goal,label.textContent+"の目標達成率"));
-        const pct=document.createElement("div");
-        pct.className="study-month-record-gap";
-        pct.textContent="目標 "+goal+"時間 ・ 達成率 "+(item.total/(goal*3600)*100).toFixed(1)+"%";
-        row.appendChild(pct);
       }
       const editor=goalEditor("この月の目標",goal,value=>saveGoals(fresh=>{
         if(value>0)fresh.studyMonthlyGoals[item.ym]=value;
         else delete fresh.studyMonthlyGoals[item.ym];
       }));
       editor.classList.add("study-goal-month");
-      row.appendChild(editor);
+      if(goalsPanel){
+        const goalRow=document.createElement("div");
+        goalRow.className="study-month-row";
+        const goalLabel=document.createElement("span");
+        goalLabel.className="study-month-label";
+        goalLabel.textContent=item.year+"年"+item.month+"月";
+        goalRow.append(goalLabel,editor);
+        goalsPanel.appendChild(goalRow);
+      }
       studyMonthHistoryEl.appendChild(row);
     });
   }
