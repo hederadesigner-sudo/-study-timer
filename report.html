@@ -257,7 +257,41 @@ th:nth-child(6),td:nth-child(6){width:23%}
     status.textContent="PDFファイルを作成しています。";
 
     try{
-      const canvas=await html2canvas(root,{scale:1.5,backgroundColor:"#ffffff",logging:false,useCORS:true});
+      const capture=root.cloneNode(true);
+      capture.classList.add("pdf-capture");
+      capture.removeAttribute("id");
+      capture.setAttribute("aria-hidden","true");
+      capture.style.cssText=[
+        "position:fixed",
+        "left:-10000px",
+        "top:0",
+        "width:900px",
+        "background:#ffffff",
+        "color:#172033",
+        "padding:18px",
+        "box-sizing:border-box",
+        "border-radius:0",
+        "box-shadow:none",
+        "z-index:-1"
+      ].join(";");
+
+      const captureStyle=document.createElement("style");
+      captureStyle.textContent=`
+        .pdf-capture h1{font-size:20px!important;margin:0 0 4px!important}
+        .pdf-capture .summary{font-size:10px!important;line-height:1.2!important;margin-bottom:7px!important}
+        .pdf-capture .scroll{overflow:visible!important;border:0!important;border-radius:0!important}
+        .pdf-capture table{width:100%!important;table-layout:fixed!important;font-size:9px!important}
+        .pdf-capture th,.pdf-capture td{padding:3px 4px!important;line-height:1.12!important}
+        .pdf-capture .female,.pdf-capture .memo{line-height:1.12!important}
+      `;
+      document.head.appendChild(captureStyle);
+      document.body.appendChild(capture);
+
+      const canvas=await html2canvas(capture,{scale:1.6,backgroundColor:"#ffffff",logging:false,useCORS:true});
+
+      capture.remove();
+      captureStyle.remove();
+
       const {jsPDF}=window.jspdf;
       const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4",compress:true});
       const margin=8,pageWidth=297,pageHeight=210;
