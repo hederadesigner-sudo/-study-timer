@@ -173,6 +173,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .female-chip-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .female-chip-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
 .female-chip-grid.five{grid-template-columns:repeat(5,minmax(0,1fr))}
+.female-chip-grid.one{grid-template-columns:minmax(0,160px)}
 .female-chip{min-width:0;min-height:44px;border:1px solid #e0e4ea;border-radius:12px;background:#fff;color:var(--text);padding:8px 6px;font-size:12px;font-weight:750;line-height:1.25}
 .female-chip.is-selected{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .color-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:7px 3px;font-size:10px}
@@ -405,7 +406,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.7</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.8</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -572,6 +573,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
               <button type="button" class="female-chip color-chip" data-value="yellow"><span class="color-dot yellow"></span>黄色</button>
               <button type="button" class="female-chip color-chip" data-value="pink"><span class="color-dot pink"></span>ピンク</button>
               <button type="button" class="female-chip color-chip" data-value="brown"><span class="color-dot brown"></span>茶色</button>
+            </div>
+          </section>
+
+          <section class="female-health-card">
+            <div class="female-health-section-title">不正出血</div>
+            <div class="female-chip-grid one" data-single-group="abnormalBleeding">
+              <button type="button" class="female-chip" data-value="yes">あり</button>
             </div>
           </section>
 
@@ -1798,6 +1806,7 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
     setFemaleMultiValues("delicateSymptoms",f.delicateSymptoms||[]);
     setFemaleSingleValue("periodPain",f.periodPain||"");
     setFemaleSingleValue("periodFlow",f.periodFlow||"");
+    setFemaleSingleValue("abnormalBleeding",f.abnormalBleeding||"");
   }
 
   function currentFemaleHealth(){
@@ -1807,7 +1816,8 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
       dischargeColor:femaleSingleValue("dischargeColor"),
       delicateSymptoms:femaleMultiValues("delicateSymptoms"),
       periodPain:femaleSingleValue("periodPain"),
-      periodFlow:femaleSingleValue("periodFlow")
+      periodFlow:femaleSingleValue("periodFlow"),
+      abnormalBleeding:femaleSingleValue("abnormalBleeding")
     };
   }
 
