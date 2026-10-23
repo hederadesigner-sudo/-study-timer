@@ -250,6 +250,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .clock-center{fill:#fff;stroke:var(--line);stroke-width:1}
 .clock-time{fill:var(--text);font-size:26px;font-weight:800;text-anchor:middle;dominant-baseline:middle;font-variant-numeric:tabular-nums}
 .clock-date{fill:var(--text);font-size:14px;font-weight:800;text-anchor:middle}
+.clock-date-number{font-size:20px;font-weight:850}
 .clock-date-sub{fill:var(--muted);font-size:11px;font-weight:700;text-anchor:middle}
 .clock-hour{fill:var(--muted);font-size:14px;font-weight:750;text-anchor:middle;dominant-baseline:middle}
 .clock-tick{stroke:#cfd4dd;stroke-width:1.5}
@@ -1426,8 +1427,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       const mm=String(now.getMinutes()).padStart(2,"0");
       svg.push('<text class="clock-time" x="'+cx+'" y="'+cy+'">'+hh+':'+mm+'</text>');
     }else{
-      const label=activityDateLabel(date);
-      svg.push('<text class="clock-date" x="'+cx+'" y="'+(cy-4)+'">'+label+'</text>');
+      const p=String(date||"").split("-").map(Number);
+      const weekdays=["日","月","火","水","木","金","土"];
+      const d=new Date(p[0],p[1]-1,p[2]);
+      const weekday=weekdays[d.getDay()]||"";
+      svg.push(
+        '<text class="clock-date" x="'+cx+'" y="'+(cy-4)+'">'+
+        '<tspan class="clock-date-number">'+p[1]+'</tspan><tspan>月</tspan>'+
+        '<tspan class="clock-date-number">'+p[2]+'</tspan><tspan>日（'+weekday+'）</tspan>'+
+        '</text>'
+      );
       svg.push('<text class="clock-date-sub" x="'+cx+'" y="'+(cy+18)+'">の活動</text>');
     }
     svg.push('</svg>');
