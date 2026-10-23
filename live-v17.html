@@ -70,15 +70,15 @@ button{font:inherit;-webkit-tap-highlight-color:transparent}
 .wrap{max-width:760px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 14px calc(40px + env(safe-area-inset-bottom))}
 .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:14px;overflow:hidden}
 h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-height:1.45}
-.study-subject-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;margin-top:14px}
-.study-subject-add-open{width:auto!important;min-width:118px!important;height:var(--control-h)!important}
+.study-subject-row{display:block;margin-top:14px}
 .study-subject-editor{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fafbfc}
 .study-subject-editor.is-hidden{display:none!important}
-.study-subject-editor-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .study-subject-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
-.study-subject-item{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff}
-.study-subject-item-name{font-size:13px;font-weight:750;min-width:0;word-break:break-word}
-.study-subject-item button{width:auto!important;min-width:70px!important;height:34px!important;min-height:34px!important;font-size:11px!important;padding:0 10px!important}
+.study-subject-item{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff;flex-wrap:wrap}
+.study-subject-item-name{font-size:13px;font-weight:750;min-width:0;word-break:break-word;flex:1}
+.study-subject-order{display:flex;gap:4px}
+.study-subject-item button{width:auto!important;min-width:34px!important;height:34px!important;min-height:34px!important;font-size:11px!important;padding:0 10px!important}
+.study-subject-delete{color:#b42318!important}
 .study-month-history-entry{margin-top:12px}
 .study-month-history{display:flex;flex-direction:column;gap:7px}
 .study-month-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;border-bottom:1px solid #eceff3;padding:9px 2px}
@@ -87,8 +87,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .study-month-total{font-size:13px;font-weight:800;white-space:nowrap}
 .study-month-breakdown{grid-column:1/-1;font-size:11px;color:var(--muted);line-height:1.45}
 @media(max-width:520px){
-  .study-subject-row{grid-template-columns:1fr}
-  .study-subject-add-open{width:100%!important}
+  .study-subject-item{gap:6px}
 }
 .timer{font-size:50px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:.015em;margin:18px 0 14px;text-align:center}
 .primary{width:100%;height:var(--control-h);min-height:var(--control-h);border:1px solid var(--accent);border-radius:var(--control-radius);background:var(--accent);color:#fff;font-size:17px;font-weight:750;cursor:pointer}
@@ -456,19 +455,20 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         <label for="studySubject">勉強項目</label>
         <select id="studySubject"></select>
       </div>
-      <button class="secondary study-subject-add-open" id="openStudySubjectEditor" type="button">＋ 項目を追加</button>
     </div>
 
     <div class="study-subject-editor is-hidden" id="studySubjectEditor">
+      <div class="custom-activity-panel-head">
+        <strong>勉強項目のカスタマイズ</strong>
+        <button class="secondary custom-activity-close" id="closeStudySubjectEditor" type="button">閉じる</button>
+      </div>
       <div class="life-field">
         <label for="studySubjectName">新しい勉強項目</label>
         <input id="studySubjectName" type="text" maxlength="20" placeholder="例：宅建、簿記">
       </div>
-      <div class="study-subject-editor-actions">
-        <button class="secondary" id="addStudySubject" type="button">追加</button>
-        <button class="secondary" id="closeStudySubjectEditor" type="button">閉じる</button>
-      </div>
+      <button class="secondary" id="addStudySubject" type="button">勉強項目を追加</button>
       <div class="study-subject-list" id="studySubjectList"></div>
+      <div class="small">↑↓で並び替え、名前・色を変更できます。記録がある項目は削除できません。</div>
     </div>
 
     <div class="timer" id="timer">00:00:00</div>
@@ -548,7 +548,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.32</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.33</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -886,7 +886,6 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const timerEl=document.getElementById("timer");
   const toggleBtn=document.getElementById("toggle");
   const studySubjectEl=document.getElementById("studySubject");
-  const openStudySubjectEditorBtn=document.getElementById("openStudySubjectEditor");
   const studySubjectEditorEl=document.getElementById("studySubjectEditor");
   const studySubjectNameEl=document.getElementById("studySubjectName");
   const addStudySubjectBtn=document.getElementById("addStudySubject");
@@ -1161,12 +1160,22 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       const source=localStudyTs>=remoteStudyTs?local:remote;
       merged.studySubjects=(source.studySubjects||[])
         .filter(x=>x&&x.id&&x.label)
-        .map(x=>({id:String(x.id),label:String(x.label).slice(0,20),createdAt:Number(x.createdAt||0)}));
+        .map((x,i)=>({
+          id:String(x.id),
+          label:String(x.label).slice(0,20),
+          color:String(x.color||STUDY_SUBJECT_COLORS[i%STUDY_SUBJECT_COLORS.length]),
+          createdAt:Number(x.createdAt||0)
+        }));
       merged.studySubjectsUpdatedAt=Math.max(localStudyTs,remoteStudyTs);
     }else{
       const map=new Map();
       [...(remote.studySubjects||[]),...(local.studySubjects||[])].forEach(x=>{
-        if(x&&x.id&&x.label) map.set(String(x.id),{id:String(x.id),label:String(x.label).slice(0,20),createdAt:Number(x.createdAt||0)});
+        if(x&&x.id&&x.label) map.set(String(x.id),{
+          id:String(x.id),
+          label:String(x.label).slice(0,20),
+          color:String(x.color||STUDY_SUBJECT_COLORS[map.size%STUDY_SUBJECT_COLORS.length]),
+          createdAt:Number(x.createdAt||0)
+        });
       });
       merged.studySubjects=[...map.values()];
       merged.studySubjectsUpdatedAt=0;
@@ -1493,6 +1502,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return Math.max(0,Math.floor((Date.now()-data.startedAt)/1000));
   }
 
+  const STUDY_SUBJECT_COLORS=["#5c7cfa","#2a9d8f","#e9a03b","#c26dbc","#e56b6f","#118ab2","#8f6fd1","#6c8c4d"];
+
   function studySubjectLabel(data,id){
     if(!id) return "未分類";
     const item=(data.studySubjects||[]).find(x=>x&&x.id===id);
@@ -1500,51 +1511,160 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   }
 
   function renderStudySubjectOptions(data){
-    const current=studySubjectEl.value||data.lastStudySubjectId||"";
+    const current=(studySubjectEl.value&&studySubjectEl.value!=="__study_subject_settings__")
+      ?studySubjectEl.value
+      :(studySubjectEl.dataset.lastSubject||data.lastStudySubjectId||"");
     const manualCurrent=studyAddSubjectEl.value||current;
 
-    const fill=(select,value)=>{
+    const fill=(select,value,withSettings)=>{
       select.innerHTML="";
       const unc=document.createElement("option");
       unc.value="";
       unc.textContent="未分類";
       select.appendChild(unc);
+
       (data.studySubjects||[]).forEach(item=>{
         const op=document.createElement("option");
         op.value=item.id;
         op.textContent=item.label;
         select.appendChild(op);
       });
-      select.value=[...select.options].some(op=>op.value===value)?value:"";
+
+      if(withSettings){
+        const settings=document.createElement("option");
+        settings.value="__study_subject_settings__";
+        settings.textContent="⚙︎ 勉強項目をカスタマイズ";
+        select.appendChild(settings);
+      }
+
+      const valid=[...select.options].some(op=>op.value===value&&op.value!=="__study_subject_settings__");
+      select.value=valid?value:"";
     };
 
-    fill(studySubjectEl,current);
-    fill(studyAddSubjectEl,manualCurrent);
+    fill(studySubjectEl,current,true);
+    fill(studyAddSubjectEl,manualCurrent,false);
+    studySubjectEl.dataset.lastSubject=studySubjectEl.value;
+  }
+
+  function openStudySubjectSettings(){
+    studySubjectEditorEl.classList.remove("is-hidden");
+    renderStudySubjectList(load());
+    setTimeout(()=>studySubjectEditorEl.scrollIntoView({behavior:"smooth",block:"nearest"}),0);
+  }
+
+  function closeStudySubjectSettings(){
+    studySubjectEditorEl.classList.add("is-hidden");
   }
 
   function renderStudySubjectList(data){
     studySubjectListEl.innerHTML="";
-    if(!(data.studySubjects||[]).length){
+    const items=data.studySubjects||[];
+    if(!items.length){
       const empty=document.createElement("div");
       empty.className="small";
       empty.textContent="まだ勉強項目はありません。";
       studySubjectListEl.appendChild(empty);
       return;
     }
-    (data.studySubjects||[]).forEach(item=>{
+
+    items.forEach((item,index)=>{
       const row=document.createElement("div");
       row.className="study-subject-item";
+
+      const dot=document.createElement("span");
+      dot.className="custom-activity-dot";
+      dot.style.background=item.color||STUDY_SUBJECT_COLORS[index%STUDY_SUBJECT_COLORS.length];
+
       const name=document.createElement("span");
       name.className="study-subject-item-name";
       name.textContent=item.label;
+
+      const order=document.createElement("div");
+      order.className="study-subject-order";
+
+      const up=document.createElement("button");
+      up.type="button";
+      up.className="secondary";
+      up.textContent="↑";
+      up.disabled=index===0;
+      up.dataset.studySubjectMove=item.id;
+      up.dataset.direction="-1";
+
+      const down=document.createElement("button");
+      down.type="button";
+      down.className="secondary";
+      down.textContent="↓";
+      down.disabled=index===items.length-1;
+      down.dataset.studySubjectMove=item.id;
+      down.dataset.direction="1";
+      order.append(up,down);
+
+      const color=document.createElement("input");
+      color.type="color";
+      color.className="custom-activity-color";
+      color.value=item.color||STUDY_SUBJECT_COLORS[index%STUDY_SUBJECT_COLORS.length];
+      color.dataset.studySubjectColor=item.id;
+      color.setAttribute("aria-label",item.label+"の色");
+
       const rename=document.createElement("button");
       rename.type="button";
       rename.className="secondary";
       rename.textContent="名前変更";
       rename.dataset.studySubjectRename=item.id;
-      row.append(name,rename);
+
+      const del=document.createElement("button");
+      del.type="button";
+      del.className="secondary study-subject-delete";
+      del.textContent="削除";
+      del.dataset.studySubjectDelete=item.id;
+
+      row.append(dot,name,order,color,rename,del);
       studySubjectListEl.appendChild(row);
     });
+  }
+
+  function moveStudySubject(id,direction){
+    const data=load();
+    const items=[...(data.studySubjects||[])];
+    const index=items.findIndex(x=>x&&x.id===id);
+    const nextIndex=index+Number(direction||0);
+    if(index<0||nextIndex<0||nextIndex>=items.length) return;
+    const [item]=items.splice(index,1);
+    items.splice(nextIndex,0,item);
+    data.studySubjects=items;
+    data.studySubjectsUpdatedAt=Date.now();
+    save(data);
+    renderStudySubjectOptions(data);
+    renderStudySubjectList(data);
+  }
+
+  function setStudySubjectColor(id,color){
+    if(!/^#[0-9a-f]{6}$/i.test(color||"")) return;
+    const data=load();
+    const item=(data.studySubjects||[]).find(x=>x&&x.id===id);
+    if(!item) return;
+    item.color=color;
+    data.studySubjectsUpdatedAt=Date.now();
+    save(data);
+    renderStudySubjectList(data);
+  }
+
+  function deleteStudySubject(id){
+    const data=load();
+    const item=(data.studySubjects||[]).find(x=>x&&x.id===id);
+    if(!item) return;
+    const used=(data.activitySessions||[]).some(x=>x&&x.category==="study"&&x.studySubjectId===id)||
+      (data.running&&data.runningStudySubjectId===id);
+    if(used){
+      studyAddMsgEl.textContent="「"+item.label+"」の勉強記録があるため削除できません。名前変更はできます。";
+      return;
+    }
+    data.studySubjects=(data.studySubjects||[]).filter(x=>x&&x.id!==id);
+    if(data.lastStudySubjectId===id) data.lastStudySubjectId="";
+    data.studySubjectsUpdatedAt=Date.now();
+    save(data);
+    renderStudySubjectOptions(data);
+    renderStudySubjectList(data);
   }
 
   function addStudySubject(){
@@ -1552,14 +1672,20 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     if(!label) return;
     const data=load();
     if((data.studySubjects||[]).some(x=>x.label===label)) return;
-    const item={id:"subject-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,6),label,createdAt:Date.now()};
+    const item={
+      id:"subject-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,6),
+      label,
+      color:STUDY_SUBJECT_COLORS[(data.studySubjects||[]).length%STUDY_SUBJECT_COLORS.length],
+      createdAt:Date.now()
+    };
     data.studySubjects=[...(data.studySubjects||[]),item];
     data.studySubjectsUpdatedAt=Date.now();
     data.lastStudySubjectId=item.id;
     save(data);
     studySubjectNameEl.value="";
-    render();
+    renderStudySubjectOptions(data);
     studySubjectEl.value=item.id;
+    studySubjectEl.dataset.lastSubject=item.id;
     studyAddSubjectEl.value=item.id;
     renderStudySubjectList(data);
   }
@@ -1575,7 +1701,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     item.label=label;
     data.studySubjectsUpdatedAt=Date.now();
     save(data);
-    render();
+    renderStudySubjectOptions(data);
     renderStudySubjectList(data);
   }
 
@@ -2519,7 +2645,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const monthValue=selectedHealthReportMonth();
     const url=new URL("report.html",window.location.href);
     url.searchParams.set("month",monthValue);
-    url.searchParams.set("v","17.32");
+    url.searchParams.set("v","17.33");
     const opened=window.open(url.toString(),"_blank");
     if(!opened){
       window.location.href=url.toString();
@@ -3309,6 +3435,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   }
 
   studySubjectEl.addEventListener("change",()=>{
+    if(studySubjectEl.value==="__study_subject_settings__"){
+      const previous=studySubjectEl.dataset.lastSubject||"";
+      openStudySubjectSettings();
+      studySubjectEl.value=[...studySubjectEl.options].some(op=>op.value===previous)?previous:"";
+      return;
+    }
+    studySubjectEl.dataset.lastSubject=studySubjectEl.value;
     const data=load();
     data.lastStudySubjectId=studySubjectEl.value||"";
     save(data);
@@ -3319,19 +3452,30 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     data.lastStudySubjectId=studyAddSubjectEl.value||"";
     save(data);
     studySubjectEl.value=studyAddSubjectEl.value;
+    studySubjectEl.dataset.lastSubject=studySubjectEl.value;
   });
-  openStudySubjectEditorBtn.addEventListener("click",()=>{
-    studySubjectEditorEl.classList.remove("is-hidden");
-    renderStudySubjectList(load());
-  });
-  closeStudySubjectEditorBtn.addEventListener("click",()=>studySubjectEditorEl.classList.add("is-hidden"));
+  closeStudySubjectEditorBtn.addEventListener("click",closeStudySubjectSettings);
   addStudySubjectBtn.addEventListener("click",addStudySubject);
   studySubjectNameEl.addEventListener("keydown",e=>{
     if(e.key==="Enter"){e.preventDefault();addStudySubject();}
   });
   studySubjectListEl.addEventListener("click",e=>{
-    const btn=e.target.closest("[data-study-subject-rename]");
-    if(btn) renameStudySubject(btn.dataset.studySubjectRename);
+    const move=e.target.closest("[data-study-subject-move]");
+    if(move){
+      moveStudySubject(move.dataset.studySubjectMove,move.dataset.direction);
+      return;
+    }
+    const rename=e.target.closest("[data-study-subject-rename]");
+    if(rename){
+      renameStudySubject(rename.dataset.studySubjectRename);
+      return;
+    }
+    const del=e.target.closest("[data-study-subject-delete]");
+    if(del) deleteStudySubject(del.dataset.studySubjectDelete);
+  });
+  studySubjectListEl.addEventListener("change",e=>{
+    const color=e.target.closest("[data-study-subject-color]");
+    if(color) setStudySubjectColor(color.dataset.studySubjectColor,color.value);
   });
 
   addStudyTimeBtn.addEventListener("click",addManualStudyTime);
@@ -3472,9 +3616,49 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     restoreBackupFile(file);
   });
 
+  function updateLiveUi(){
+    const data=load();
+
+    if(data.running&&data.startedAt){
+      const startDate=dateKey(new Date(Number(data.startedAt)));
+      if(startDate!==dateKey()){
+        render();
+        return;
+      }
+    }
+
+    const live=currentLiveSeconds(data);
+    const today=dateKey();
+    const liveToday=data.running&&data.runningDate===today?live:0;
+    const todaySec=Number(data.days[today]||0)+liveToday;
+    timerEl.textContent=fmtClock(live);
+    todayTotalEl.textContent=fmtMin(todaySec);
+
+    const currentWeek=weekDays(0);
+    weekTotalEl.textContent=fmtMin(effectiveWeekSeconds(data,currentWeek,live));
+
+    const now=new Date();
+    const currentMonthSec=
+      monthTotalSeconds(data,now.getFullYear(),now.getMonth()+1,live)+
+      monthAdjustmentSeconds(data,now.getFullYear(),now.getMonth(),live);
+    allTimeTotalEl.textContent=fmtMin(currentMonthSec);
+
+    if(data.running){
+      statusText.textContent="計測中"+(data.runningStudySubjectId?"："+studySubjectLabel(data,data.runningStudySubjectId):"");
+    }else{
+      statusText.textContent="停止中";
+    }
+
+    if(data.activityRunning&&data.activityRunning.startedAt){
+      const label=activityMeta(data,data.activityRunning.category).label;
+      const elapsed=Math.max(0,(Date.now()-Number(data.activityRunning.startedAt))/1000);
+      liveActivityStatusEl.textContent="現在："+label+" "+fmtClock(elapsed);
+    }
+  }
+
   render();
   initCloud();
-  setInterval(render,500);
+  setInterval(updateLiveUi,500);
 })();
 </script>
 <div id="printReport" class="print-report" aria-hidden="true"></div>
