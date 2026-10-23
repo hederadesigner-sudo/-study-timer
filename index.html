@@ -74,6 +74,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .primary{width:100%;height:var(--control-h);min-height:var(--control-h);border:1px solid var(--accent);border-radius:var(--control-radius);background:var(--accent);color:#fff;font-size:17px;font-weight:750;cursor:pointer}
 .primary.running{background:#171c27}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:13px}
+.stats .stat:last-child:nth-child(odd){grid-column:1/-1}
 .stat{padding:13px 10px;border:1px solid var(--line);border-radius:15px;text-align:center;min-width:0}
 .stat strong{display:block;font-size:21px;margin-top:4px;font-variant-numeric:tabular-nums}
 .week-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
@@ -2925,6 +2926,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
       const fill=document.createElement("div");
       fill.className="week-bar-fill";
+      fill.style.background=activityMeta(data,"study").color;
       const percent=sec>0?Math.max(2,Math.min(100,sec/maxSec*100)):0;
       fill.style.height=percent+"%";
       track.appendChild(fill);
@@ -3002,9 +3004,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       return;
     }
 
-    let data=load();
-    if(data.running) stop();
-    data=load();
+    const data=load();
     data.days[targetDate]=Number(data.days[targetDate]||0)+seconds;
     save(data);
 
