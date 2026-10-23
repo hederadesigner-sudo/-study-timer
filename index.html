@@ -432,7 +432,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.19</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.20</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -641,7 +641,6 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       <div class="health-report-row">
         <input id="healthReportMonth" type="month">
         <button class="secondary" id="previewHealthReport" type="button">Webでプレビュー</button>
-        <button class="secondary" id="exportHealthPdf" type="button">PDFファイルとして保存</button>
       </div>
     </div>
   </div>
@@ -744,7 +743,6 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const saveHealthBtn=document.getElementById("saveHealth");
   const healthReportMonthEl=document.getElementById("healthReportMonth");
   const previewHealthReportBtn=document.getElementById("previewHealthReport");
-  const exportHealthPdfBtn=document.getElementById("exportHealthPdf");
   const lifeDateEl=document.getElementById("lifeDate");
   const lifeCategoryEl=document.getElementById("lifeCategory");
   const lifeToggleBtn=document.getElementById("lifeToggle");
@@ -1750,219 +1748,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const monthValue=selectedHealthReportMonth();
     const url=new URL("report.html",window.location.href);
     url.searchParams.set("month",monthValue);
-    url.searchParams.set("v","17.19");
+    url.searchParams.set("v","17.20");
     const opened=window.open(url.toString(),"_blank");
     if(!opened){
       window.location.href=url.toString();
       return;
     }
     healthMsgEl.textContent=monthValue.replace("-","年")+"月のWebプレビューを開きました。";
-  }
-
-  async function exportHealthMonthPdf(){
-    const monthValue=selectedHealthReportMonth();
-
-    if(typeof html2canvas!=="function" || !window.jspdf || !window.jspdf.jsPDF){
-      healthMsgEl.textContent="PDF作成機能を読み込めませんでした。ページを再読み込みしてもう一度お試しください。";
-      return;
-    }
-
-    const [year,month]=monthValue.split("-").map(Number);
-    const daysInMonth=new Date(year,month,0).getDate();
-    const data=load();
-
-    exportHealthPdfBtn.disabled=true;
-    const oldButtonText=exportHealthPdfBtn.textContent;
-    exportHealthPdfBtn.textContent="PDFを作成中…";
-    healthMsgEl.textContent="PDFファイルを作成しています。";
-
-    let renderRoot=null;
-
-    try{
-      let totalSleep=0;
-      let sleepDays=0;
-      const rows=[];
-
-      for(let day=1;day<=daysInMonth;day++){
-        const k=String(year)+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");
-        const sleep=activitySecondsForDate(data,k,"sleep");
-        const h=(data.health||{})[k]||{};
-        const female=(h.femaleHealth&&typeof h.femaleHealth==="object")?h.femaleHealth:{};
-        const period=!!periodRangeForDate(data,k);
-        if(sleep>0){ totalSleep+=sleep; sleepDays++; }
-
-        const femaleBits=[];
-
-        const pain=femalePdfLabel("periodPain",female.periodPain);
-        if(pain) femaleBits.push("生理痛："+pain);
-
-        const flow=femalePdfLabel("periodFlow",female.periodFlow);
-        if(flow) femaleBits.push("経血量："+flow);
-
-        const discharge=[
-          femalePdfLabel("dischargeAmount",female.dischargeAmount),
-          femalePdfLabel("dischargeState",female.dischargeState),
-          femalePdfLabel("dischargeColor",female.dischargeColor)
-        ].filter(Boolean).join("・");
-        if(discharge) femaleBits.push("おりもの："+discharge);
-
-        if(female.abnormalBleeding==="yes") femaleBits.push("不正出血：あり");
-
-        const delicate=(Array.isArray(female.delicateSymptoms)?female.delicateSymptoms:[])
-          .map(v=>femalePdfLabel("delicateSymptoms",v))
-          .filter(Boolean)
-          .join("・");
-        if(delicate) femaleBits.push("デリケートゾーン："+delicate);
-
-        rows.push({
-          day,
-          sleep,
-          condition:h.condition||"",
-          period,
-          female:femaleBits.join("\n"),
-          memo:h.memo||""
-        });
-      }
-
-      const avgSleep=sleepDays?Math.round(totalSleep/sleepDays):0;
-      const bodyRows=rows.map(r=>`
-        <tr>
-          <td>${r.day}日</td>
-          <td>${r.sleep?escapeHtml(fmtMin(r.sleep)):""}</td>
-          <td>${r.condition?escapeHtml(String(r.condition)+" "+conditionLabel(r.condition)):""}</td>
-          <td class="center">${r.period?"●":""}</td>
-          <td class="female">${escapeHtml(r.female)}</td>
-          <td class="memo">${escapeHtml(r.memo)}</td>
-        </tr>`).join("");
-
-      renderRoot=document.createElement("div");
-      renderRoot.setAttribute("aria-hidden","true");
-      renderRoot.style.cssText=[
-        "position:fixed",
-        "left:-10000px",
-        "top:0",
-        "width:900px",
-        "background:#fff",
-        "color:#172033",
-        "padding:42px",
-        "font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif",
-        "box-sizing:border-box",
-        "z-index:-1"
-      ].join(";");
-
-      renderRoot.innerHTML=`
-        <style>
-          .pdf-title{font-size:20px;font-weight:800;margin:0 0 4px}
-          .pdf-summary{font-size:10px;color:#5f6878;margin-bottom:7px;line-height:1.2}
-          .pdf-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}
-          .pdf-table th,.pdf-table td{border:1px solid #cfd5df;padding:3px 4px;line-height:1.12;vertical-align:top;word-break:break-word}
-          .pdf-table th{background:#f2f4f7;font-weight:800}
-          .pdf-table th:nth-child(1),.pdf-table td:nth-child(1){width:8%}
-          .pdf-table th:nth-child(2),.pdf-table td:nth-child(2){width:14%}
-          .pdf-table th:nth-child(3),.pdf-table td:nth-child(3){width:17%}
-          .pdf-table th:nth-child(4),.pdf-table td:nth-child(4){width:8%;text-align:center}
-          .pdf-table th:nth-child(5),.pdf-table td:nth-child(5){width:33%}
-          .pdf-table th:nth-child(6),.pdf-table td:nth-child(6){width:20%}
-          .female,.memo{white-space:pre-wrap;word-break:break-word;line-height:1.12}
-          .pdf-footer{margin-top:12px;font-size:10px;color:#7a8391}
-        </style>
-        <div class="pdf-title">体調管理　${year}年${month}月</div>
-        <div class="pdf-summary">
-          睡眠合計：${escapeHtml(fmtMin(totalSleep))}
-         　／　睡眠記録日の平均：${sleepDays?escapeHtml(fmtMin(avgSleep)):"未記録"}
-         　／　生理：●
-        </div>
-        <table class="pdf-table">
-          <thead>
-            <tr>
-              <th>日付</th>
-              <th>睡眠</th>
-              <th>体調</th>
-              <th>生理</th>
-              <th>女性記録</th>
-              <th>メモ</th>
-            </tr>
-          </thead>
-          <tbody>${bodyRows}</tbody>
-        </table>
-        <div class="pdf-footer">勉強・生活時間・体調記録から作成</div>
-      `;
-
-      document.body.appendChild(renderRoot);
-
-      const canvas=await html2canvas(renderRoot,{
-        scale:1.6,
-        backgroundColor:"#ffffff",
-        logging:false,
-        useCORS:true,
-        removeContainer:true
-      });
-
-      const {jsPDF}=window.jspdf;
-      const pdf=new jsPDF({
-        orientation:"landscape",
-        unit:"mm",
-        format:"a4",
-        compress:true
-      });
-
-      const margin=8;
-      const pageWidth=297;
-      const pageHeight=210;
-      const contentWidth=pageWidth-margin*2;
-      const contentHeight=pageHeight-margin*2;
-
-      const scale=Math.min(
-        contentWidth/canvas.width,
-        contentHeight/canvas.height
-      );
-      const imgWidth=canvas.width*scale;
-      const imgHeight=canvas.height*scale;
-      const x=(pageWidth-imgWidth)/2;
-      const y=margin;
-
-      const img=canvas.toDataURL("image/jpeg",0.94);
-      pdf.addImage(img,"JPEG",x,y,imgWidth,imgHeight,"","FAST");
-
-      const blob=pdf.output("blob");
-      const filename="体調管理_"+year+"年"+String(month).padStart(2,"0")+"月.pdf";
-      const file=new File([blob],filename,{type:"application/pdf"});
-
-      let shared=false;
-      try{
-        if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-          await navigator.share({
-            files:[file],
-            title:"体調管理 "+year+"年"+month+"月"
-          });
-          shared=true;
-          healthMsgEl.textContent="PDFファイルを作成しました。共有・保存先を選択できます。";
-        }
-      }catch(e){
-        if(e&&e.name==="AbortError"){
-          healthMsgEl.textContent="PDFの共有をキャンセルしました。";
-          shared=true;
-        }
-      }
-
-      if(!shared){
-        const url=URL.createObjectURL(blob);
-        const a=document.createElement("a");
-        a.href=url;
-        a.download=filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(()=>URL.revokeObjectURL(url),3000);
-        healthMsgEl.textContent="PDFファイルを作成して保存しました。";
-      }
-    }catch(e){
-      healthMsgEl.textContent="PDFファイルを作成できませんでした。ページを再読み込みしてもう一度お試しください。";
-    }finally{
-      if(renderRoot&&renderRoot.parentNode) renderRoot.remove();
-      exportHealthPdfBtn.disabled=false;
-      exportHealthPdfBtn.textContent=oldButtonText;
-    }
   }
 
   function femaleSingleValue(group){
@@ -2646,7 +2438,6 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   savePeriodBtn.addEventListener("click",savePeriodRecord);
   deletePeriodBtn.addEventListener("click",deletePeriodRecord);
   previewHealthReportBtn.addEventListener("click",previewHealthMonthReport);
-  exportHealthPdfBtn.addEventListener("click",exportHealthMonthPdf);
 
   cloudSignInBtn.addEventListener("click",cloudSignIn);
   cloudSignUpBtn.addEventListener("click",cloudSignUp);
