@@ -304,6 +304,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .custom-activity-item{display:flex;align-items:center;gap:8px;border:1px solid #e0e4ea;border-radius:12px;padding:8px 10px;background:#fff}
 .custom-activity-dot{width:11px;height:11px;border-radius:50%;flex:0 0 11px}
 .custom-activity-name{font-size:13px;font-weight:750;flex:1;min-width:0;word-break:break-word}
+.custom-activity-order{display:flex;gap:4px}
+.custom-activity-move{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:0!important;font-size:15px!important}
+.custom-activity-move:disabled{opacity:.28}
 .custom-activity-delete{width:auto!important;min-width:56px!important;height:34px!important;min-height:34px!important;padding:0 10px!important;font-size:11px!important;color:#b42318!important}
 .life-title{font-size:19px;font-weight:750;margin:0 0 6px}
 .life-controls{display:flex;flex-direction:column;gap:12px;margin-top:14px}
@@ -502,7 +505,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
           </div>
           <button class="secondary" id="addCustomActivity" type="button">活動を追加</button>
           <div class="custom-activity-list" id="customActivityList"></div>
-          <div class="small">追加した活動は、活動選択・円グラフ・過去記録の修正にも表示されます。</div>
+          <div class="small">追加した活動は↑↓で並び替えできます。「その他」は常に一番下に表示されます。</div>
         </div>
       </details>
 
@@ -926,6 +929,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       activitySessions:[],
       deletedActivitySessionIds:[],
       customActivityCategories:[],
+      customActivityCategoriesUpdatedAt:0,
       activityRunning:null,
       running:false,
       startedAt:null,
@@ -994,17 +998,33 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     merged.activitySessions=sessions;
     merged.deletedActivitySessionIds=[...deletedIds];
 
-    const customMap=new Map();
-    [...(remote.customActivityCategories||[]),...(local.customActivityCategories||[])].forEach(item=>{
-      if(!item||typeof item!=="object"||!item.id||!item.label) return;
-      customMap.set(item.id,{
-        id:String(item.id),
-        label:String(item.label).slice(0,20),
-        color:String(item.color||"#667085"),
-        createdAt:Number(item.createdAt||0)
+    const localCustomTs=Number(local.customActivityCategoriesUpdatedAt||0);
+    const remoteCustomTs=Number(remote.customActivityCategoriesUpdatedAt||0);
+    if(localCustomTs||remoteCustomTs){
+      const customSource=localCustomTs>=remoteCustomTs?local:remote;
+      merged.customActivityCategories=(customSource.customActivityCategories||[])
+        .filter(item=>item&&typeof item==="object"&&item.id&&item.label)
+        .map(item=>({
+          id:String(item.id),
+          label:String(item.label).slice(0,20),
+          color:String(item.color||"#667085"),
+          createdAt:Number(item.createdAt||0)
+        }));
+      merged.customActivityCategoriesUpdatedAt=Math.max(localCustomTs,remoteCustomTs);
+    }else{
+      const customMap=new Map();
+      [...(remote.customActivityCategories||[]),...(local.customActivityCategories||[])].forEach(item=>{
+        if(!item||typeof item!=="object"||!item.id||!item.label) return;
+        customMap.set(item.id,{
+          id:String(item.id),
+          label:String(item.label).slice(0,20),
+          color:String(item.color||"#667085"),
+          createdAt:Number(item.createdAt||0)
+        });
       });
-    });
-    merged.customActivityCategories=[...customMap.values()];
+      merged.customActivityCategories=[...customMap.values()];
+      merged.customActivityCategoriesUpdatedAt=0;
+    }
 
     if(local.running){
       merged.running=true;
@@ -1083,6 +1103,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     if(!Array.isArray(d.activitySessions)) d.activitySessions=[];
     if(!Array.isArray(d.deletedActivitySessionIds)) d.deletedActivitySessionIds=[];
     if(!Array.isArray(d.customActivityCategories)) d.customActivityCategories=[];
+    if(!Number.isFinite(Number(d.customActivityCategoriesUpdatedAt))) d.customActivityCategoriesUpdatedAt=0;
     if(d.deletedActivitySessionIds.length){
       const deleted=new Set(d.deletedActivitySessionIds);
       d.activitySessions=d.activitySessions.filter(x=>x&&x.id&&!deleted.has(x.id));
@@ -1416,7 +1437,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       customActivityListEl.appendChild(empty);
       return;
     }
-    items.forEach(item=>{
+    items.forEach((item,index)=>{
       const row=document.createElement("div");
       row.className="custom-activity-item";
       const dot=document.createElement("span");
@@ -1425,12 +1446,37 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       const name=document.createElement("span");
       name.className="custom-activity-name";
       name.textContent=item.label;
+
+      const order=document.createElement("div");
+      order.className="custom-activity-order";
+
+      const up=document.createElement("button");
+      up.type="button";
+      up.className="secondary custom-activity-move";
+      up.textContent="↑";
+      up.title="上へ";
+      up.disabled=index===0;
+      up.dataset.customActivityMove=item.id;
+      up.dataset.direction="-1";
+
+      const down=document.createElement("button");
+      down.type="button";
+      down.className="secondary custom-activity-move";
+      down.textContent="↓";
+      down.title="下へ";
+      down.disabled=index===items.length-1;
+      down.dataset.customActivityMove=item.id;
+      down.dataset.direction="1";
+
+      order.append(up,down);
+
       const del=document.createElement("button");
       del.type="button";
       del.className="secondary custom-activity-delete";
       del.textContent="削除";
       del.dataset.customActivityDelete=item.id;
-      row.append(dot,name,del);
+
+      row.append(dot,name,order,del);
       customActivityListEl.appendChild(row);
     });
   }
@@ -1452,11 +1498,27 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const id="custom-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,6);
     const color=CUSTOM_ACTIVITY_COLORS[items.length%CUSTOM_ACTIVITY_COLORS.length];
     data.customActivityCategories=[...items,{id,label:label.slice(0,20),color,createdAt:Date.now()}];
+    data.customActivityCategoriesUpdatedAt=Date.now();
     save(data);
     customActivityNameEl.value="";
     render();
     lifeCategoryEl.value=id;
     lifeMsgEl.textContent="「"+label+"」を活動に追加しました。";
+  }
+
+  function moveCustomActivity(id,direction){
+    const data=load();
+    const items=[...(data.customActivityCategories||[])];
+    const index=items.findIndex(x=>x&&x.id===id);
+    const nextIndex=index+Number(direction||0);
+    if(index<0||nextIndex<0||nextIndex>=items.length) return;
+    const [item]=items.splice(index,1);
+    items.splice(nextIndex,0,item);
+    data.customActivityCategories=items;
+    data.customActivityCategoriesUpdatedAt=Date.now();
+    save(data);
+    render();
+    lifeMsgEl.textContent="活動の順番を変更しました。";
   }
 
   function deleteCustomActivity(id){
@@ -1470,6 +1532,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       return;
     }
     data.customActivityCategories=(data.customActivityCategories||[]).filter(x=>x&&x.id!==id);
+    data.customActivityCategoriesUpdatedAt=Date.now();
     save(data);
     render();
     lifeMsgEl.textContent="「"+item.label+"」を活動一覧から削除しました。";
@@ -2467,6 +2530,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       periodRanges:[...(data.periodRanges||[])],
       activitySessions:[...(data.activitySessions||[])],
       customActivityCategories:[...(data.customActivityCategories||[])],
+      customActivityCategoriesUpdatedAt:Number(data.customActivityCategoriesUpdatedAt||0),
       activityRunning:data.activityRunning||null
     };
   }
@@ -2536,11 +2600,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         parsed.activitySessions.forEach(x=>{ if(x&&x.id&&!existing.has(x.id)) data.activitySessions.push(x); });
       }
       if(Array.isArray(parsed.customActivityCategories)){
-        const existingCustom=new Set((data.customActivityCategories||[]).map(x=>x.id));
-        data.customActivityCategories=data.customActivityCategories||[];
-        parsed.customActivityCategories.forEach(x=>{
-          if(x&&x.id&&x.label&&!existingCustom.has(x.id)) data.customActivityCategories.push(x);
-        });
+        if(Number(parsed.customActivityCategoriesUpdatedAt||0)>=Number(data.customActivityCategoriesUpdatedAt||0)){
+          data.customActivityCategories=parsed.customActivityCategories.filter(x=>x&&x.id&&x.label);
+          data.customActivityCategoriesUpdatedAt=Number(parsed.customActivityCategoriesUpdatedAt||Date.now());
+        }else{
+          const existingCustom=new Set((data.customActivityCategories||[]).map(x=>x.id));
+          data.customActivityCategories=data.customActivityCategories||[];
+          parsed.customActivityCategories.forEach(x=>{
+            if(x&&x.id&&x.label&&!existingCustom.has(x.id)) data.customActivityCategories.push(x);
+          });
+        }
       }
       save(data);
       backupMsg.textContent="バックアップを復元しました。";
@@ -2755,8 +2824,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     if(e.key==="Enter"){ e.preventDefault(); addCustomActivity(); }
   });
   customActivityListEl.addEventListener("click",e=>{
-    const btn=e.target.closest("[data-custom-activity-delete]");
-    if(btn) deleteCustomActivity(btn.dataset.customActivityDelete);
+    const move=e.target.closest("[data-custom-activity-move]");
+    if(move){
+      moveCustomActivity(move.dataset.customActivityMove,move.dataset.direction);
+      return;
+    }
+    const del=e.target.closest("[data-custom-activity-delete]");
+    if(del) deleteCustomActivity(del.dataset.customActivityDelete);
   });
 
   document.querySelectorAll("[data-single-group] .female-chip").forEach(btn=>{
