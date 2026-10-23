@@ -155,7 +155,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .medication-category-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
 .medication-category{min-width:0;min-height:76px;border:1px solid #e0e4ea;border-radius:14px;background:#fff;color:var(--text);padding:8px 3px;font:inherit;font-size:11px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
 .medication-category.is-selected{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
-.medication-icon{width:34px;height:34px;border-radius:10px;background:#f5f6f8;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;line-height:1}
+.medication-icon{width:38px;height:38px;border-radius:11px;background:#f6f7fa;display:flex;align-items:center;justify-content:center;color:#344054}
+.medication-icon svg{width:27px;height:27px;display:block}
 .medication-editor{margin-top:12px;padding:12px;border-radius:14px;background:#f8fafc}
 .medication-editor .field{margin-top:10px}
 .medication-editor textarea{min-height:78px;height:78px}
@@ -175,7 +176,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 @media(max-width:520px){
   .medication-category-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
   .medication-category{min-height:70px;font-size:10px;padding:6px 2px}
-  .medication-icon{width:30px;height:30px;font-size:17px}
+  .medication-icon{width:34px;height:34px}
+  .medication-icon svg{width:24px;height:24px}
 }
 .female-health{width:100%;border:1px solid #d8dee8;border-radius:var(--control-radius);background:#fff;overflow:hidden}
 .female-health summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:var(--control-h);padding:0 16px;font-size:14px;font-weight:800;cursor:pointer}
@@ -459,7 +461,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.21</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.22</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -553,19 +555,29 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         <div class="medication-title">服薬記録</div>
         <div class="medication-category-grid">
           <button type="button" class="medication-category" data-med-category="pill">
-            <span class="medication-icon">💊</span><span>ピル</span>
+            <span class="medication-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="12" width="18" height="8" rx="4" transform="rotate(-38 16 16)"/><path d="M12.6 10.2 21.8 21"/></g></svg>
+            </span><span>ピル</span>
           </button>
           <button type="button" class="medication-category" data-med-category="painkiller">
-            <span class="medication-icon">🩹</span><span>鎮痛剤</span>
+            <span class="medication-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="9" width="19" height="14" rx="3"/><circle cx="11" cy="14" r="2"/><circle cx="17" cy="14" r="2"/><circle cx="23" cy="14" r="2"/><circle cx="11" cy="19" r="2"/><circle cx="17" cy="19" r="2"/><circle cx="23" cy="19" r="2"/></g></svg>
+            </span><span>鎮痛剤</span>
           </button>
           <button type="button" class="medication-category" data-med-category="supplement">
-            <span class="medication-icon">Fe</span><span>サプリ</span>
+            <span class="medication-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M11 8h10"/><path d="M12 8v3h8V8"/><rect x="9" y="11" width="14" height="14" rx="3"/><path d="M12 17h8"/><path d="M12 21h5"/></g></svg>
+            </span><span>サプリ</span>
           </button>
           <button type="button" class="medication-category" data-med-category="kampo">
-            <span class="medication-icon">漢</span><span>漢方</span>
+            <span class="medication-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 19h16c0 5-3.7 7-8 7s-8-2-8-7Z"/><path d="M12 15c1-4 5-6 9-7-1 4-4 7-8 8"/><path d="M18 13c2 1 3 3 3 5"/></g></svg>
+            </span><span>漢方</span>
           </button>
           <button type="button" class="medication-category" data-med-category="other">
-            <span class="medication-icon">＋</span><span>その他</span>
+            <span class="medication-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="16" cy="16" r="9"/><path d="M16 11v10M11 16h10"/></g></svg>
+            </span><span>その他</span>
           </button>
         </div>
 
@@ -1824,7 +1836,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const monthValue=selectedHealthReportMonth();
     const url=new URL("report.html",window.location.href);
     url.searchParams.set("month",monthValue);
-    url.searchParams.set("v","17.21");
+    url.searchParams.set("v","17.22");
     const opened=window.open(url.toString(),"_blank");
     if(!opened){
       window.location.href=url.toString();
