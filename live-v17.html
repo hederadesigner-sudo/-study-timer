@@ -300,6 +300,11 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 }
 .cal-health{font-size:8px;line-height:1.2;margin-top:3px;text-align:center;color:var(--text)}
 .period-mark{font-size:8px;font-weight:750;margin-top:2px}
+.custom-activity-list{display:flex;flex-direction:column;gap:7px}
+.custom-activity-item{display:flex;align-items:center;gap:8px;border:1px solid #e0e4ea;border-radius:12px;padding:8px 10px;background:#fff}
+.custom-activity-dot{width:11px;height:11px;border-radius:50%;flex:0 0 11px}
+.custom-activity-name{font-size:13px;font-weight:750;flex:1;min-width:0;word-break:break-word}
+.custom-activity-delete{width:auto!important;min-width:56px!important;height:34px!important;min-height:34px!important;padding:0 10px!important;font-size:11px!important;color:#b42318!important}
 .life-title{font-size:19px;font-weight:750;margin:0 0 6px}
 .life-controls{display:flex;flex-direction:column;gap:12px;margin-top:14px}
 .life-row{display:grid;grid-template-columns:1fr;gap:10px}
@@ -461,8 +466,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.22</span></div>
-    <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.23</span></div>
+    <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
       <div class="life-row one">
@@ -487,6 +492,19 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
           <button class="secondary" id="lifeToggle" type="button">この活動を開始</button>
         </div>
       </div>
+
+      <details class="manual-entry custom-activity-entry">
+        <summary>＋ 活動を追加</summary>
+        <div class="manual-body">
+          <div class="life-field">
+            <label for="customActivityName">活動名</label>
+            <input id="customActivityName" type="text" maxlength="20" placeholder="例：仕事、家事、入浴">
+          </div>
+          <button class="secondary" id="addCustomActivity" type="button">活動を追加</button>
+          <div class="custom-activity-list" id="customActivityList"></div>
+          <div class="small">追加した活動は、活動選択・円グラフ・過去記録の修正にも表示されます。</div>
+        </div>
+      </details>
 
       <details class="manual-entry">
         <summary>あとから時間を追加</summary>
@@ -835,6 +853,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const lifeStartEl=document.getElementById("lifeStart");
   const lifeEndEl=document.getElementById("lifeEnd");
   const addLifeManualBtn=document.getElementById("addLifeManual");
+  const customActivityNameEl=document.getElementById("customActivityName");
+  const addCustomActivityBtn=document.getElementById("addCustomActivity");
+  const customActivityListEl=document.getElementById("customActivityList");
   const lifeMsgEl=document.getElementById("lifeMsg");
   const lifePieEl=document.getElementById("lifePie");
   const lifeLegendEl=document.getElementById("lifeLegend");
@@ -904,6 +925,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       periodRangesUpdatedAt:0,
       activitySessions:[],
       deletedActivitySessionIds:[],
+      customActivityCategories:[],
       activityRunning:null,
       running:false,
       startedAt:null,
@@ -971,6 +993,18 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     });
     merged.activitySessions=sessions;
     merged.deletedActivitySessionIds=[...deletedIds];
+
+    const customMap=new Map();
+    [...(remote.customActivityCategories||[]),...(local.customActivityCategories||[])].forEach(item=>{
+      if(!item||typeof item!=="object"||!item.id||!item.label) return;
+      customMap.set(item.id,{
+        id:String(item.id),
+        label:String(item.label).slice(0,20),
+        color:String(item.color||"#667085"),
+        createdAt:Number(item.createdAt||0)
+      });
+    });
+    merged.customActivityCategories=[...customMap.values()];
 
     if(local.running){
       merged.running=true;
@@ -1048,6 +1082,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     if(!Number.isFinite(Number(d.periodRangesUpdatedAt))) d.periodRangesUpdatedAt=0;
     if(!Array.isArray(d.activitySessions)) d.activitySessions=[];
     if(!Array.isArray(d.deletedActivitySessionIds)) d.deletedActivitySessionIds=[];
+    if(!Array.isArray(d.customActivityCategories)) d.customActivityCategories=[];
     if(d.deletedActivitySessionIds.length){
       const deleted=new Set(d.deletedActivitySessionIds);
       d.activitySessions=d.activitySessions.filter(x=>x&&x.id&&!deleted.has(x.id));
@@ -1344,6 +1379,101 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     other:{label:"その他",color:"#9aa1ad"},
     untracked:{label:"未記録",color:"#eef0f4"}
   };
+  const CUSTOM_ACTIVITY_COLORS=["#e56b6f","#118ab2","#8f6fd1","#2a9d8f","#e9a03b","#5c7cfa","#c26dbc","#6c8c4d"];
+
+  function activityMeta(data,category){
+    if(ACTIVITY_META[category]) return ACTIVITY_META[category];
+    const custom=(data.customActivityCategories||[]).find(x=>x&&x.id===category);
+    if(custom) return {label:custom.label,color:custom.color||"#667085"};
+    return {label:"その他",color:"#9aa1ad"};
+  }
+
+  function selectableActivityKeys(data){
+    return ["sleep","meal","break","outing","other",...(data.customActivityCategories||[]).map(x=>x.id)];
+  }
+
+  function renderLifeCategoryOptions(data){
+    const current=lifeCategoryEl.value||"sleep";
+    lifeCategoryEl.innerHTML="";
+    selectableActivityKeys(data).forEach(k=>{
+      const meta=activityMeta(data,k);
+      const op=document.createElement("option");
+      op.value=k;
+      op.textContent=meta.label;
+      lifeCategoryEl.appendChild(op);
+    });
+    const exists=[...lifeCategoryEl.options].some(op=>op.value===current);
+    lifeCategoryEl.value=exists?current:"sleep";
+  }
+
+  function renderCustomActivityList(data){
+    customActivityListEl.innerHTML="";
+    const items=data.customActivityCategories||[];
+    if(!items.length){
+      const empty=document.createElement("div");
+      empty.className="small";
+      empty.textContent="追加した活動はありません。";
+      customActivityListEl.appendChild(empty);
+      return;
+    }
+    items.forEach(item=>{
+      const row=document.createElement("div");
+      row.className="custom-activity-item";
+      const dot=document.createElement("span");
+      dot.className="custom-activity-dot";
+      dot.style.background=item.color||"#667085";
+      const name=document.createElement("span");
+      name.className="custom-activity-name";
+      name.textContent=item.label;
+      const del=document.createElement("button");
+      del.type="button";
+      del.className="secondary custom-activity-delete";
+      del.textContent="削除";
+      del.dataset.customActivityDelete=item.id;
+      row.append(dot,name,del);
+      customActivityListEl.appendChild(row);
+    });
+  }
+
+  function addCustomActivity(){
+    const label=(customActivityNameEl.value||"").trim().replace(/\s+/g," ");
+    if(!label){
+      lifeMsgEl.textContent="追加する活動名を入力してください。";
+      customActivityNameEl.focus();
+      return;
+    }
+    const data=load();
+    const duplicate=selectableActivityKeys(data).some(k=>activityMeta(data,k).label===label);
+    if(duplicate){
+      lifeMsgEl.textContent="同じ名前の活動がすでにあります。";
+      return;
+    }
+    const items=data.customActivityCategories||[];
+    const id="custom-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,6);
+    const color=CUSTOM_ACTIVITY_COLORS[items.length%CUSTOM_ACTIVITY_COLORS.length];
+    data.customActivityCategories=[...items,{id,label:label.slice(0,20),color,createdAt:Date.now()}];
+    save(data);
+    customActivityNameEl.value="";
+    render();
+    lifeCategoryEl.value=id;
+    lifeMsgEl.textContent="「"+label+"」を活動に追加しました。";
+  }
+
+  function deleteCustomActivity(id){
+    const data=load();
+    const item=(data.customActivityCategories||[]).find(x=>x&&x.id===id);
+    if(!item) return;
+    const used=(data.activitySessions||[]).some(x=>x&&x.category===id)||
+      (data.activityRunning&&data.activityRunning.category===id);
+    if(used){
+      lifeMsgEl.textContent="「"+item.label+"」の時間記録があるため削除できません。先に記録を修正または削除してください。";
+      return;
+    }
+    data.customActivityCategories=(data.customActivityCategories||[]).filter(x=>x&&x.id!==id);
+    save(data);
+    render();
+    lifeMsgEl.textContent="「"+item.label+"」を活動一覧から削除しました。";
+  }
 
   function activityId(){
     return Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
@@ -1425,10 +1555,10 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       const catLabel=document.createElement("label");
       catLabel.textContent="活動";
       const cat=document.createElement("select");
-      ["sleep","meal","break","outing","other"].forEach(k=>{
+      selectableActivityKeys(data).forEach(k=>{
         const op=document.createElement("option");
         op.value=k;
-        op.textContent=ACTIVITY_META[k].label;
+        op.textContent=activityMeta(data,k).label;
         op.selected=session.category===k;
         cat.appendChild(op);
       });
@@ -1487,7 +1617,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         deleteActivitySession(next,session.id);
         pushActivitySegment(next,cat.value,start,end,"manual-edit");
         save(next);
-        lifeMsgEl.textContent=ACTIVITY_META[cat.value].label+"の時間を修正しました。";
+        lifeMsgEl.textContent=activityMeta(next,cat.value).label+"の時間を修正しました。";
         render();
       });
 
@@ -1495,7 +1625,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         const next=load();
         deleteActivitySession(next,session.id);
         save(next);
-        lifeMsgEl.textContent=ACTIVITY_META[session.category].label+"の記録を削除しました。";
+        lifeMsgEl.textContent=activityMeta(next,session.category).label+"の記録を削除しました。";
         render();
       });
 
@@ -1526,7 +1656,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   function toggleLifeActivity(){
     let data=load();
     if(data.activityRunning&&data.activityRunning.startedAt){
-      const label=ACTIVITY_META[data.activityRunning.category].label;
+      const label=activityMeta(data,data.activityRunning.category).label;
       data=stopRunningLife(data);
       save(data);
       lifeMsgEl.textContent=label+"を終了して保存しました。";
@@ -1537,7 +1667,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       }
       data.activityRunning={category:lifeCategoryEl.value,startedAt:Date.now()};
       save(data);
-      lifeMsgEl.textContent=ACTIVITY_META[lifeCategoryEl.value].label+"を開始しました。";
+      lifeMsgEl.textContent=activityMeta(data,lifeCategoryEl.value).label+"を開始しました。";
     }
     render();
   }
@@ -1590,7 +1720,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const segments=[];
 
     (data.activitySessions||[]).forEach(x=>{
-      if(!x||x.date!==date||!ACTIVITY_META[x.category]) return;
+      if(!x||x.date!==date) return;
       const a=Math.max(dayStart,Number(x.start||0));
       const b=Math.min(dayEnd,Number(x.end||0));
       if(b<=a) return;
@@ -1644,7 +1774,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     segments.forEach(seg=>{
       const path=clockArcPath(cx,cy,r,seg.start,seg.end);
       if(!path) return;
-      const color=ACTIVITY_META[seg.category].color;
+      const color=activityMeta(data,seg.category).color;
       svg.push('<path class="clock-arc" d="'+path+'" stroke="'+color+'"></path>');
     });
 
@@ -1663,7 +1793,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       if(duration<60) return;
       const mid=(seg.start+seg.end)/2;
       const p=clockPoint(cx,cy,r,mid);
-      const label=ACTIVITY_META[seg.category].label;
+      const label=escapeHtml(activityMeta(data,seg.category).label);
       svg.push('<text class="clock-segment-label" x="'+p.x.toFixed(2)+'" y="'+p.y.toFixed(2)+'">'+label+'</text>');
     });
 
@@ -1692,17 +1822,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
   function renderLife(data){
     const date=selectedLifeDate();
-    const vals={
-      study:studySecondsForLifeDate(data,date),
-      sleep:activitySecondsForDate(data,date,"sleep"),
-      meal:activitySecondsForDate(data,date,"meal"),
-      break:activitySecondsForDate(data,date,"break"),
-      outing:activitySecondsForDate(data,date,"outing"),
-      other:activitySecondsForDate(data,date,"other")
-    };
+    renderLifeCategoryOptions(data);
+    renderCustomActivityList(data);
+
+    const selectable=selectableActivityKeys(data);
+    const vals={study:studySecondsForLifeDate(data,date)};
+    selectable.forEach(k=>{ vals[k]=activitySecondsForDate(data,date,k); });
     const known=Object.values(vals).reduce((a,b)=>a+b,0);
     vals.untracked=Math.max(0,86400-known);
-    sleepTotalEl.textContent="睡眠 合計："+fmtMin(vals.sleep);
+
+    sleepTotalEl.textContent="睡眠 合計："+fmtMin(vals.sleep||0);
     renderLifeSessionEditor(data,date);
 
     if(date===dateKey()){
@@ -1712,7 +1841,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         activeLabel="勉強";
         activeElapsed=currentLiveSeconds(data);
       }else if(data.activityRunning&&data.activityRunning.startedAt){
-        activeLabel=ACTIVITY_META[data.activityRunning.category].label;
+        activeLabel=activityMeta(data,data.activityRunning.category).label;
         activeElapsed=Math.max(0,(Date.now()-Number(data.activityRunning.startedAt))/1000);
       }
       liveActivityStatusEl.textContent=activeElapsed>0
@@ -1721,27 +1850,29 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     }else{
       liveActivityStatusEl.textContent=activityDateLabel(date)+"の活動";
     }
-    const order=["study","sleep","meal","break","outing","other","untracked"];
+
+    const order=["study",...selectable,"untracked"];
     renderDayClock(data,date);
 
     lifeLegendEl.innerHTML="";
     order.forEach(k=>{
+      const meta=activityMeta(data,k);
       const row=document.createElement("div");
       row.className="pie-item";
       const dot=document.createElement("span");
       dot.className="pie-dot";
-      dot.style.background=ACTIVITY_META[k].color;
+      dot.style.background=meta.color;
       const name=document.createElement("span");
-      name.textContent=ACTIVITY_META[k].label;
+      name.textContent=meta.label;
       const time=document.createElement("span");
       time.className="pie-time";
-      time.textContent=fmtMin(vals[k]);
+      time.textContent=fmtMin(vals[k]||0);
       row.append(dot,name,time);
       lifeLegendEl.appendChild(row);
     });
 
     if(data.activityRunning&&data.activityRunning.startedAt){
-      lifeToggleBtn.textContent="■ "+ACTIVITY_META[data.activityRunning.category].label+"を終了";
+      lifeToggleBtn.textContent="■ "+activityMeta(data,data.activityRunning.category).label+"を終了";
       lifeToggleBtn.classList.add("running");
     }else{
       lifeToggleBtn.textContent="この活動を開始";
@@ -1836,7 +1967,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const monthValue=selectedHealthReportMonth();
     const url=new URL("report.html",window.location.href);
     url.searchParams.set("month",monthValue);
-    url.searchParams.set("v","17.22");
+    url.searchParams.set("v","17.23");
     const opened=window.open(url.toString(),"_blank");
     if(!opened){
       window.location.href=url.toString();
@@ -2335,6 +2466,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       health:{...data.health},
       periodRanges:[...(data.periodRanges||[])],
       activitySessions:[...(data.activitySessions||[])],
+      customActivityCategories:[...(data.customActivityCategories||[])],
       activityRunning:data.activityRunning||null
     };
   }
@@ -2402,6 +2534,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         data.activitySessions=data.activitySessions||[];
         const existing=new Set(data.activitySessions.map(x=>x.id));
         parsed.activitySessions.forEach(x=>{ if(x&&x.id&&!existing.has(x.id)) data.activitySessions.push(x); });
+      }
+      if(Array.isArray(parsed.customActivityCategories)){
+        const existingCustom=new Set((data.customActivityCategories||[]).map(x=>x.id));
+        data.customActivityCategories=data.customActivityCategories||[];
+        parsed.customActivityCategories.forEach(x=>{
+          if(x&&x.id&&x.label&&!existingCustom.has(x.id)) data.customActivityCategories.push(x);
+        });
       }
       save(data);
       backupMsg.textContent="バックアップを復元しました。";
@@ -2611,6 +2750,14 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   });
   lifeToggleBtn.addEventListener("click",toggleLifeActivity);
   addLifeManualBtn.addEventListener("click",addManualLife);
+  addCustomActivityBtn.addEventListener("click",addCustomActivity);
+  customActivityNameEl.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){ e.preventDefault(); addCustomActivity(); }
+  });
+  customActivityListEl.addEventListener("click",e=>{
+    const btn=e.target.closest("[data-custom-activity-delete]");
+    if(btn) deleteCustomActivity(btn.dataset.customActivityDelete);
+  });
 
   document.querySelectorAll("[data-single-group] .female-chip").forEach(btn=>{
     btn.setAttribute("aria-pressed","false");
