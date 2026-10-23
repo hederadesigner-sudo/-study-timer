@@ -432,7 +432,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.13</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.14</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -640,7 +640,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       <div class="small">体調・睡眠・生理・おりもの・不正出血・デリケートゾーン・メモを1ヶ月分の表にまとめて出力します。</div>
       <div class="health-report-row">
         <input id="healthReportMonth" type="month">
-        <button class="secondary" id="exportHealthPdf" type="button">1ヶ月分をPDF出力</button>
+        <button class="secondary" id="exportHealthPdf" type="button">PDFファイルとして保存</button>
       </div>
     </div>
   </div>
@@ -686,6 +686,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 (() => {
   const KEY="study_timer_15min_v5";
@@ -1731,10 +1733,23 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return (maps[type]&&maps[type][value])||"";
   }
 
-  function exportHealthMonthPdf(){
-    const monthValue=healthReportMonthEl.value;
+  async function exportHealthMonthPdf(){
+    let monthValue=(healthReportMonthEl&&healthReportMonthEl.value)||"";
+
     if(!/^\d{4}-\d{2}$/.test(monthValue)){
-      healthMsgEl.textContent="PDFにする月を選択してください。";
+      const selectedDate=(healthDateEl&&healthDateEl.value)||(lifeDateEl&&lifeDateEl.value)||dateKey();
+      if(/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)){
+        monthValue=selectedDate.slice(0,7);
+        if(healthReportMonthEl) healthReportMonthEl.value=monthValue;
+      }
+    }
+    if(!/^\d{4}-\d{2}$/.test(monthValue)){
+      monthValue=dateKey().slice(0,7);
+      if(healthReportMonthEl) healthReportMonthEl.value=monthValue;
+    }
+
+    if(typeof html2canvas!=="function" || !window.jspdf || !window.jspdf.jsPDF){
+      healthMsgEl.textContent="PDF作成機能を読み込めませんでした。ページを再読み込みしてもう一度お試しください。";
       return;
     }
 
@@ -1742,118 +1757,215 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const daysInMonth=new Date(year,month,0).getDate();
     const data=load();
 
-    let totalSleep=0;
-    let sleepDays=0;
-    const rows=[];
+    exportHealthPdfBtn.disabled=true;
+    const oldButtonText=exportHealthPdfBtn.textContent;
+    exportHealthPdfBtn.textContent="PDFを作成中…";
+    healthMsgEl.textContent="PDFファイルを作成しています。";
 
-    for(let day=1;day<=daysInMonth;day++){
-      const k=String(year)+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");
-      const sleep=activitySecondsForDate(data,k,"sleep");
-      const h=(data.health||{})[k]||{};
-      const female=(h.femaleHealth&&typeof h.femaleHealth==="object")?h.femaleHealth:{};
-      const period=!!periodRangeForDate(data,k);
-      if(sleep>0){ totalSleep+=sleep; sleepDays++; }
+    let renderRoot=null;
 
-      const femaleBits=[];
+    try{
+      let totalSleep=0;
+      let sleepDays=0;
+      const rows=[];
 
-      const pain=femalePdfLabel("periodPain",female.periodPain);
-      if(pain) femaleBits.push("生理痛："+pain);
+      for(let day=1;day<=daysInMonth;day++){
+        const k=String(year)+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+        const sleep=activitySecondsForDate(data,k,"sleep");
+        const h=(data.health||{})[k]||{};
+        const female=(h.femaleHealth&&typeof h.femaleHealth==="object")?h.femaleHealth:{};
+        const period=!!periodRangeForDate(data,k);
+        if(sleep>0){ totalSleep+=sleep; sleepDays++; }
 
-      const flow=femalePdfLabel("periodFlow",female.periodFlow);
-      if(flow) femaleBits.push("経血量："+flow);
+        const femaleBits=[];
 
-      const discharge=[
-        femalePdfLabel("dischargeAmount",female.dischargeAmount),
-        femalePdfLabel("dischargeState",female.dischargeState),
-        femalePdfLabel("dischargeColor",female.dischargeColor)
-      ].filter(Boolean).join("・");
-      if(discharge) femaleBits.push("おりもの："+discharge);
+        const pain=femalePdfLabel("periodPain",female.periodPain);
+        if(pain) femaleBits.push("生理痛："+pain);
 
-      if(female.abnormalBleeding==="yes") femaleBits.push("不正出血：あり");
+        const flow=femalePdfLabel("periodFlow",female.periodFlow);
+        if(flow) femaleBits.push("経血量："+flow);
 
-      const delicate=(Array.isArray(female.delicateSymptoms)?female.delicateSymptoms:[])
-        .map(v=>femalePdfLabel("delicateSymptoms",v))
-        .filter(Boolean)
-        .join("・");
-      if(delicate) femaleBits.push("デリケートゾーン："+delicate);
+        const discharge=[
+          femalePdfLabel("dischargeAmount",female.dischargeAmount),
+          femalePdfLabel("dischargeState",female.dischargeState),
+          femalePdfLabel("dischargeColor",female.dischargeColor)
+        ].filter(Boolean).join("・");
+        if(discharge) femaleBits.push("おりもの："+discharge);
 
-      rows.push({
-        day,
-        sleep,
-        condition:h.condition||"",
-        period,
-        female:femaleBits.join("\n"),
-        memo:h.memo||""
+        if(female.abnormalBleeding==="yes") femaleBits.push("不正出血：あり");
+
+        const delicate=(Array.isArray(female.delicateSymptoms)?female.delicateSymptoms:[])
+          .map(v=>femalePdfLabel("delicateSymptoms",v))
+          .filter(Boolean)
+          .join("・");
+        if(delicate) femaleBits.push("デリケートゾーン："+delicate);
+
+        rows.push({
+          day,
+          sleep,
+          condition:h.condition||"",
+          period,
+          female:femaleBits.join("\n"),
+          memo:h.memo||""
+        });
+      }
+
+      const avgSleep=sleepDays?Math.round(totalSleep/sleepDays):0;
+      const bodyRows=rows.map(r=>`
+        <tr>
+          <td>${r.day}日</td>
+          <td>${r.sleep?escapeHtml(fmtMin(r.sleep)):""}</td>
+          <td>${r.condition?escapeHtml(String(r.condition)+" "+conditionLabel(r.condition)):""}</td>
+          <td class="center">${r.period?"●":""}</td>
+          <td class="female">${escapeHtml(r.female)}</td>
+          <td class="memo">${escapeHtml(r.memo)}</td>
+        </tr>`).join("");
+
+      renderRoot=document.createElement("div");
+      renderRoot.setAttribute("aria-hidden","true");
+      renderRoot.style.cssText=[
+        "position:fixed",
+        "left:-10000px",
+        "top:0",
+        "width:794px",
+        "background:#fff",
+        "color:#172033",
+        "padding:42px",
+        "font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif",
+        "box-sizing:border-box",
+        "z-index:-1"
+      ].join(";");
+
+      renderRoot.innerHTML=`
+        <style>
+          .pdf-title{font-size:26px;font-weight:800;margin:0 0 10px}
+          .pdf-summary{font-size:13px;color:#5f6878;margin-bottom:16px;line-height:1.5}
+          .pdf-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px}
+          .pdf-table th,.pdf-table td{border:1px solid #cfd5df;padding:7px 6px;vertical-align:top;word-break:break-word}
+          .pdf-table th{background:#f2f4f7;font-weight:800}
+          .pdf-table th:nth-child(1),.pdf-table td:nth-child(1){width:8%}
+          .pdf-table th:nth-child(2),.pdf-table td:nth-child(2){width:14%}
+          .pdf-table th:nth-child(3),.pdf-table td:nth-child(3){width:17%}
+          .pdf-table th:nth-child(4),.pdf-table td:nth-child(4){width:8%;text-align:center}
+          .pdf-table th:nth-child(5),.pdf-table td:nth-child(5){width:30%}
+          .pdf-table th:nth-child(6),.pdf-table td:nth-child(6){width:23%}
+          .female,.memo{white-space:pre-wrap;word-break:break-word;line-height:1.45}
+          .pdf-footer{margin-top:12px;font-size:10px;color:#7a8391}
+        </style>
+        <div class="pdf-title">体調管理　${year}年${month}月</div>
+        <div class="pdf-summary">
+          睡眠合計：${escapeHtml(fmtMin(totalSleep))}
+         　／　睡眠記録日の平均：${sleepDays?escapeHtml(fmtMin(avgSleep)):"未記録"}
+         　／　生理：●
+        </div>
+        <table class="pdf-table">
+          <thead>
+            <tr>
+              <th>日付</th>
+              <th>睡眠</th>
+              <th>体調</th>
+              <th>生理</th>
+              <th>女性記録</th>
+              <th>メモ</th>
+            </tr>
+          </thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+        <div class="pdf-footer">勉強・生活時間・体調記録から作成</div>
+      `;
+
+      document.body.appendChild(renderRoot);
+
+      const canvas=await html2canvas(renderRoot,{
+        scale:1.6,
+        backgroundColor:"#ffffff",
+        logging:false,
+        useCORS:true,
+        removeContainer:true
       });
+
+      const {jsPDF}=window.jspdf;
+      const pdf=new jsPDF({
+        orientation:"portrait",
+        unit:"mm",
+        format:"a4",
+        compress:true
+      });
+
+      const margin=8;
+      const pageWidth=210;
+      const pageHeight=297;
+      const contentWidth=pageWidth-margin*2;
+      const contentHeight=pageHeight-margin*2;
+      const pxPerMm=canvas.width/contentWidth;
+      const pagePixelHeight=Math.max(1,Math.floor(contentHeight*pxPerMm));
+
+      let offsetY=0;
+      let pageIndex=0;
+
+      while(offsetY<canvas.height){
+        const chunkHeight=Math.min(pagePixelHeight,canvas.height-offsetY);
+        const pageCanvas=document.createElement("canvas");
+        pageCanvas.width=canvas.width;
+        pageCanvas.height=chunkHeight;
+        const ctx=pageCanvas.getContext("2d");
+        ctx.fillStyle="#ffffff";
+        ctx.fillRect(0,0,pageCanvas.width,pageCanvas.height);
+        ctx.drawImage(
+          canvas,
+          0,offsetY,canvas.width,chunkHeight,
+          0,0,pageCanvas.width,pageCanvas.height
+        );
+
+        const img=pageCanvas.toDataURL("image/jpeg",0.92);
+        const imgHeight=chunkHeight/pxPerMm;
+
+        if(pageIndex>0) pdf.addPage();
+        pdf.addImage(img,"JPEG",margin,margin,contentWidth,imgHeight,"","FAST");
+
+        offsetY+=chunkHeight;
+        pageIndex++;
+      }
+
+      const blob=pdf.output("blob");
+      const filename="体調管理_"+year+"年"+String(month).padStart(2,"0")+"月.pdf";
+      const file=new File([blob],filename,{type:"application/pdf"});
+
+      let shared=false;
+      try{
+        if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+          await navigator.share({
+            files:[file],
+            title:"体調管理 "+year+"年"+month+"月"
+          });
+          shared=true;
+          healthMsgEl.textContent="PDFファイルを作成しました。共有・保存先を選択できます。";
+        }
+      }catch(e){
+        if(e&&e.name==="AbortError"){
+          healthMsgEl.textContent="PDFの共有をキャンセルしました。";
+          shared=true;
+        }
+      }
+
+      if(!shared){
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement("a");
+        a.href=url;
+        a.download=filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),3000);
+        healthMsgEl.textContent="PDFファイルを作成して保存しました。";
+      }
+    }catch(e){
+      healthMsgEl.textContent="PDFファイルを作成できませんでした。ページを再読み込みしてもう一度お試しください。";
+    }finally{
+      if(renderRoot&&renderRoot.parentNode) renderRoot.remove();
+      exportHealthPdfBtn.disabled=false;
+      exportHealthPdfBtn.textContent=oldButtonText;
     }
-
-    const avgSleep=sleepDays?Math.round(totalSleep/sleepDays):0;
-    const bodyRows=rows.map(r=>`
-      <tr>
-        <td>${r.day}日</td>
-        <td>${r.sleep?escapeHtml(fmtMin(r.sleep)):""}</td>
-        <td>${r.condition?escapeHtml(String(r.condition)+" "+conditionLabel(r.condition)):""}</td>
-        <td>${r.period?"●":""}</td>
-        <td class="female">${escapeHtml(r.female)}</td>
-        <td class="memo">${escapeHtml(r.memo)}</td>
-      </tr>`).join("");
-
-    const html=`<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>体調管理 ${year}年${month}月</title>
-<style>
-@page{size:A4 portrait;margin:12mm}
-*{box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;color:#172033;margin:0}
-h1{font-size:20px;margin:0 0 6px}
-.summary{font-size:11px;color:#5f6878;margin-bottom:10px}
-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.5px}
-th,td{border:1px solid #cfd5df;padding:5px 4px;vertical-align:top;word-break:break-word}
-th{background:#f2f4f7;font-weight:700}
-th:nth-child(1),td:nth-child(1){width:8%}
-th:nth-child(2),td:nth-child(2){width:14%}
-th:nth-child(3),td:nth-child(3){width:17%}
-th:nth-child(4),td:nth-child(4){width:8%;text-align:center}
-th:nth-child(5),td:nth-child(5){width:30%}
-th:nth-child(6),td:nth-child(6){width:23%}
-.female,.memo{white-space:pre-wrap;word-break:break-word}
-footer{margin-top:8px;font-size:8px;color:#7a8391}
-</style>
-</head>
-<body>
-<h1>体調管理　${year}年${month}月</h1>
-<div class="summary">睡眠合計：${escapeHtml(fmtMin(totalSleep))}　／　睡眠記録日の平均：${sleepDays?escapeHtml(fmtMin(avgSleep)):"未記録"}　／　生理：●</div>
-<table>
-  <thead>
-    <tr>
-      <th>日付</th>
-      <th>睡眠</th>
-      <th>体調</th>
-      <th>生理</th>
-      <th>女性記録</th>
-      <th>メモ</th>
-    </tr>
-  </thead>
-  <tbody>${bodyRows}</tbody>
-</table>
-<footer>勉強・生活時間・体調記録から作成</footer>
-<script>
-window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
-<\/script>
-</body>
-</html>`;
-
-    const w=window.open("","_blank");
-    if(!w){
-      healthMsgEl.textContent="PDF出力画面を開けませんでした。ポップアップを許可してください。";
-      return;
-    }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    healthMsgEl.textContent="PDF出力画面を開きました。印刷画面からPDFとして保存できます。";
   }
 
   function femaleSingleValue(group){
