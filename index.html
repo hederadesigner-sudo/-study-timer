@@ -432,7 +432,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.10</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.11</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -1732,10 +1732,26 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   }
 
   function exportHealthMonthPdf(){
-    const monthValue=healthReportMonthEl.value;
+    let monthValue=(healthReportMonthEl&&healthReportMonthEl.value)||"";
+
     if(!/^\d{4}-\d{2}$/.test(monthValue)){
-      healthMsgEl.textContent="PDFにする月を選択してください。";
-      return;
+      const localized=String(monthValue).match(/(\d{4})\D+(\d{1,2})/);
+      if(localized){
+        monthValue=localized[1]+"-"+String(localized[2]).padStart(2,"0");
+      }
+    }
+
+    if(!/^\d{4}-\d{2}$/.test(monthValue)){
+      const selectedDate=(healthDateEl&&healthDateEl.value)||(lifeDateEl&&lifeDateEl.value)||dateKey();
+      if(/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)){
+        monthValue=selectedDate.slice(0,7);
+        if(healthReportMonthEl) healthReportMonthEl.value=monthValue;
+      }
+    }
+
+    if(!/^\d{4}-\d{2}$/.test(monthValue)){
+      monthValue=dateKey().slice(0,7);
+      if(healthReportMonthEl) healthReportMonthEl.value=monthValue;
     }
 
     const [year,month]=monthValue.split("-").map(Number);
