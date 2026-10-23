@@ -93,7 +93,6 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .label{margin-top:2px;font-size:12px;font-weight:700}.date{font-size:10px;color:var(--muted)}
 .legend{margin-top:10px;font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
 .study-time-entry{margin-top:13px}
-.study-time-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .secondary{display:flex;align-items:center;justify-content:center;width:100%;height:var(--control-h);min-height:var(--control-h);border:1px solid #d8dee8;border-radius:var(--control-radius);background:#fff;color:var(--text);font-size:14px;font-weight:700;cursor:pointer;padding:0 16px;box-shadow:none}
 .note{font-size:12px;line-height:1.65;color:var(--muted);padding:0 3px}
 .month-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
@@ -462,18 +461,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
           <label for="studyAddDate">日付</label>
           <input id="studyAddDate" type="date">
         </div>
-        <div class="study-time-inputs">
-          <div class="life-field">
-            <label for="studyAddHours">時間</label>
-            <input id="studyAddHours" type="number" min="0" max="24" step="1" inputmode="numeric" placeholder="0">
-          </div>
-          <div class="life-field">
-            <label for="studyAddMinutes">分</label>
-            <input id="studyAddMinutes" type="number" min="0" max="59" step="1" inputmode="numeric" placeholder="0">
-          </div>
+        <div class="life-field">
+          <label for="studyAddStart">開始時刻</label>
+          <input id="studyAddStart" type="time">
         </div>
-        <button class="secondary" id="addStudyTime" type="button">この勉強時間を追加</button>
-        <div class="small">例：1時間35分なら「時間 1」「分 35」と入力します。</div>
+        <div class="life-field">
+          <label for="studyAddEnd">終了時刻</label>
+          <input id="studyAddEnd" type="time">
+        </div>
+        <button class="secondary" id="addStudyTime" type="button">この時間を追加</button>
+        <div class="small">計測ボタンを押し忘れたときだけ使います。</div>
         <div class="life-msg" id="studyAddMsg"></div>
       </div>
     </details>
@@ -499,7 +496,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.29</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.30</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -845,8 +842,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const nextWeekBtn=document.getElementById("nextWeek");
   const chartEl=document.getElementById("chart");
   const studyAddDateEl=document.getElementById("studyAddDate");
-  const studyAddHoursEl=document.getElementById("studyAddHours");
-  const studyAddMinutesEl=document.getElementById("studyAddMinutes");
+  const studyAddStartEl=document.getElementById("studyAddStart");
+  const studyAddEndEl=document.getElementById("studyAddEnd");
   const addStudyTimeBtn=document.getElementById("addStudyTime");
   const studyAddMsgEl=document.getElementById("studyAddMsg");
   const statusText=document.getElementById("statusText");
@@ -2245,7 +2242,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const monthValue=selectedHealthReportMonth();
     const url=new URL("report.html",window.location.href);
     url.searchParams.set("month",monthValue);
-    url.searchParams.set("v","17.29");
+    url.searchParams.set("v","17.30");
     const opened=window.open(url.toString(),"_blank");
     if(!opened){
       window.location.href=url.toString();
@@ -2986,30 +2983,38 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
   function addManualStudyTime(){
     const targetDate=studyAddDateEl.value||dateKey();
-    const hours=Math.max(0,Number(studyAddHoursEl.value||0));
-    const minutes=Math.max(0,Number(studyAddMinutesEl.value||0));
+    const start=msForDateAndTime(targetDate,studyAddStartEl.value);
+    let end=msForDateAndTime(targetDate,studyAddEndEl.value);
 
     if(!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)){
       studyAddMsgEl.textContent="日付を選択してください。";
       return;
     }
-    if(!Number.isFinite(hours)||!Number.isFinite(minutes)||hours>24||minutes>59){
-      studyAddMsgEl.textContent="時間は0〜24、分は0〜59で入力してください。";
+    if(!Number.isFinite(start)||!Number.isFinite(end)){
+      studyAddMsgEl.textContent="開始時刻と終了時刻を入力してください。";
       return;
     }
-
-    const seconds=Math.round((hours*60+minutes)*60);
-    if(seconds<=0){
-      studyAddMsgEl.textContent="追加する時間を入力してください。";
-      return;
-    }
+    if(end<=start) end+=86400000;
 
     const data=load();
-    data.days[targetDate]=Number(data.days[targetDate]||0)+seconds;
+    let cursor=start;
+
+    while(cursor<end){
+      const d=new Date(cursor);
+      const nextMidnight=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1).getTime();
+      const segEnd=Math.min(end,nextMidnight);
+      const key=dateKey(new Date(cursor));
+      const sec=Math.max(0,Math.floor((segEnd-cursor)/1000));
+      data.days[key]=Number(data.days[key]||0)+sec;
+      cursor=segEnd;
+    }
+
+    pushActivitySegment(data,"study",start,end,"manual");
     save(data);
 
-    studyAddHoursEl.value="";
-    studyAddMinutesEl.value="";
+    const seconds=Math.max(0,Math.floor((end-start)/1000));
+    studyAddStartEl.value="";
+    studyAddEndEl.value="";
     studyAddMsgEl.textContent=targetDate.replace(/-/g,"/")+" に "+fmtMin(seconds)+" を追加しました。";
     render();
   }
