@@ -432,7 +432,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.17</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.18</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -1750,7 +1750,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const monthValue=selectedHealthReportMonth();
     const url=new URL("report.html",window.location.href);
     url.searchParams.set("month",monthValue);
-    url.searchParams.set("v","17.16");
+    url.searchParams.set("v","17.18");
     const opened=window.open(url.toString(),"_blank");
     if(!opened){
       window.location.href=url.toString();
@@ -1911,35 +1911,18 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       const pageHeight=210;
       const contentWidth=pageWidth-margin*2;
       const contentHeight=pageHeight-margin*2;
-      const pxPerMm=canvas.width/contentWidth;
-      const pagePixelHeight=Math.max(1,Math.floor(contentHeight*pxPerMm));
 
-      let offsetY=0;
-      let pageIndex=0;
+      const scale=Math.min(
+        contentWidth/canvas.width,
+        contentHeight/canvas.height
+      );
+      const imgWidth=canvas.width*scale;
+      const imgHeight=canvas.height*scale;
+      const x=(pageWidth-imgWidth)/2;
+      const y=margin;
 
-      while(offsetY<canvas.height){
-        const chunkHeight=Math.min(pagePixelHeight,canvas.height-offsetY);
-        const pageCanvas=document.createElement("canvas");
-        pageCanvas.width=canvas.width;
-        pageCanvas.height=chunkHeight;
-        const ctx=pageCanvas.getContext("2d");
-        ctx.fillStyle="#ffffff";
-        ctx.fillRect(0,0,pageCanvas.width,pageCanvas.height);
-        ctx.drawImage(
-          canvas,
-          0,offsetY,canvas.width,chunkHeight,
-          0,0,pageCanvas.width,pageCanvas.height
-        );
-
-        const img=pageCanvas.toDataURL("image/jpeg",0.92);
-        const imgHeight=chunkHeight/pxPerMm;
-
-        if(pageIndex>0) pdf.addPage();
-        pdf.addImage(img,"JPEG",margin,margin,contentWidth,imgHeight,"","FAST");
-
-        offsetY+=chunkHeight;
-        pageIndex++;
-      }
+      const img=canvas.toDataURL("image/jpeg",0.94);
+      pdf.addImage(img,"JPEG",x,y,imgWidth,imgHeight,"","FAST");
 
       const blob=pdf.output("blob");
       const filename="体調管理_"+year+"年"+String(month).padStart(2,"0")+"月.pdf";
