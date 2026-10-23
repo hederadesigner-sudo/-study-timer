@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="勉強タイマー">
-<meta name="app-build" content="2026-10-24-root-live-v17-38">
+<meta name="app-build" content="2026-10-24-root-live-v17-39">
 <title>勉強タイマー</title>
 <script>
 window.addEventListener("pageshow",function(e){
@@ -559,7 +559,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.38</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.39</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -1829,7 +1829,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     big.textContent=fmtMin(latest.total);
     const sub=document.createElement("div");
     sub.className="study-growth-subtitle";
-    sub.textContent="1日2時間を目安にすると、今月の目安 "+fmtMin(latestReference)+"の "+latestPercent.toFixed(1)+"% 分を積み重ねました。睡眠・休養・生活を優先してOK。目安はノルマではありません。";
+    sub.textContent="今月の達成率 "+latestPercent.toFixed(1)+"%";
     summary.append(kicker,big,sub);
     studyMonthHistoryEl.appendChild(summary);
 
@@ -1861,7 +1861,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
       const detail=document.createElement("div");
       detail.className="study-month-record-gap";
-      detail.textContent="生活と休養を確保した目安 "+fmtMin(reference)+" に対して "+percent.toFixed(1)+"% 分の勉強を記録";
+      detail.textContent="達成率 "+percent.toFixed(1)+"%";
       row.appendChild(detail);
       studyMonthHistoryEl.appendChild(row);
     });
