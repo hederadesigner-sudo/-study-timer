@@ -150,6 +150,33 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .checkline{display:flex;align-items:center;gap:10px;width:100%;height:var(--control-h);min-height:var(--control-h);padding:0 16px;border:1px solid #d8dee8;border-radius:var(--control-radius);white-space:nowrap;background:#fff;box-shadow:none}
 .checkline input{width:22px;height:22px;min-height:0;flex:0 0 22px;margin:0;padding:0}
 .health-summary{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:13px;line-height:1.55}
+.medication-card{width:100%;border:1px solid #d8dee8;border-radius:var(--control-radius);background:#fff;padding:14px}
+.medication-title{font-size:16px;font-weight:850;margin-bottom:12px}
+.medication-category-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.medication-category{min-width:0;min-height:76px;border:1px solid #e0e4ea;border-radius:14px;background:#fff;color:var(--text);padding:8px 3px;font:inherit;font-size:11px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.medication-category.is-selected{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.medication-icon{width:34px;height:34px;border-radius:10px;background:#f5f6f8;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;line-height:1}
+.medication-editor{margin-top:12px;padding:12px;border-radius:14px;background:#f8fafc}
+.medication-editor .field{margin-top:10px}
+.medication-editor textarea{min-height:78px;height:78px}
+.medication-selected{font-size:13px;font-weight:850;color:var(--accent)}
+.medication-editor-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.medication-history-title{font-size:12px;font-weight:800;margin-top:14px;color:var(--muted)}
+.medication-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.medication-empty{font-size:12px;color:var(--muted);padding:4px 0}
+.medication-record{border:1px solid #e0e4ea;border-radius:12px;padding:10px;background:#fff}
+.medication-record-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.medication-record-main{min-width:0}
+.medication-record-category{font-size:11px;color:var(--muted);font-weight:750}
+.medication-record-name{font-size:13px;font-weight:800;white-space:pre-wrap;word-break:break-word;margin-top:2px}
+.medication-record-time{font-size:12px;font-weight:800;color:var(--accent);white-space:nowrap}
+.medication-record-actions{display:flex;gap:6px;margin-top:8px}
+.medication-record-actions button{min-height:34px;height:34px;border-radius:10px;font-size:11px;padding:0 12px}
+@media(max-width:520px){
+  .medication-category-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+  .medication-category{min-height:70px;font-size:10px;padding:6px 2px}
+  .medication-icon{width:30px;height:30px;font-size:17px}
+}
 .female-health{width:100%;border:1px solid #d8dee8;border-radius:var(--control-radius);background:#fff;overflow:hidden}
 .female-health summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:var(--control-h);padding:0 16px;font-size:14px;font-weight:800;cursor:pointer}
 .female-health summary::-webkit-details-marker{display:none}
@@ -432,7 +459,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.20</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.21</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -497,7 +524,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
   <div class="card" id="healthCard">
     <div class="health-title">体調管理</div>
-    <div class="small">睡眠の合計時間や体調を記録できます。生理・おりもの・デリケートゾーンなど女性特有の体調記録は、必要なときだけ開いて入力できます。睡眠時間は生活時間の「睡眠」記録から自動集計します。</div>
+    <div class="small">睡眠時間は「生活時間」の記録から自動集計されます。</div>
 
     <div class="health-grid">
       <div class="field full">
@@ -521,6 +548,46 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
           <option value="5">5 とても良い</option>
         </select>
       </div>
+
+      <section class="medication-card">
+        <div class="medication-title">服薬記録</div>
+        <div class="medication-category-grid">
+          <button type="button" class="medication-category" data-med-category="pill">
+            <span class="medication-icon">💊</span><span>ピル</span>
+          </button>
+          <button type="button" class="medication-category" data-med-category="painkiller">
+            <span class="medication-icon">🩹</span><span>鎮痛剤</span>
+          </button>
+          <button type="button" class="medication-category" data-med-category="supplement">
+            <span class="medication-icon">Fe</span><span>サプリ</span>
+          </button>
+          <button type="button" class="medication-category" data-med-category="kampo">
+            <span class="medication-icon">漢</span><span>漢方</span>
+          </button>
+          <button type="button" class="medication-category" data-med-category="other">
+            <span class="medication-icon">＋</span><span>その他</span>
+          </button>
+        </div>
+
+        <div class="medication-editor is-hidden" id="medicationEditor">
+          <div class="medication-selected" id="medicationSelected"></div>
+          <div class="field full">
+            <label for="medicationName">薬名・メモ</label>
+            <textarea id="medicationName" placeholder="薬の名前など"></textarea>
+          </div>
+          <div class="field full">
+            <label for="medicationTime">服用時間（任意）</label>
+            <input id="medicationTime" type="time">
+          </div>
+          <div class="medication-editor-actions">
+            <button class="primary" id="saveMedication" type="button">保存</button>
+            <button class="secondary" id="cancelMedication" type="button">キャンセル</button>
+          </div>
+        </div>
+
+        <div class="medication-history-title">この日の服薬</div>
+        <div class="medication-list" id="medicationList"></div>
+      </section>
 
       <details class="female-health" id="femaleHealthDetails">
         <summary>
@@ -637,7 +704,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
     <div class="health-report">
       <div class="health-report-title">月次PDF</div>
-      <div class="small">体調・睡眠・生理・おりもの・不正出血・デリケートゾーン・メモを1ヶ月分の表にまとめて出力します。</div>
+      <div class="small">体調・睡眠・服薬・生理・女性の体調記録・メモを1ヶ月分の表にまとめて表示します。</div>
       <div class="health-report-row">
         <input id="healthReportMonth" type="month">
         <button class="secondary" id="previewHealthReport" type="button">Webでプレビュー</button>
@@ -737,7 +804,14 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const periodSymptomsEl=document.getElementById("periodSymptoms");
   const savePeriodBtn=document.getElementById("savePeriod");
   const deletePeriodBtn=document.getElementById("deletePeriod");
-  const healthMemoEl=document.getElementById("healthMemo");
+  const medicationEditorEl=document.getElementById("medicationEditor");
+  const medicationSelectedEl=document.getElementById("medicationSelected");
+  const medicationNameEl=document.getElementById("medicationName");
+  const medicationTimeEl=document.getElementById("medicationTime");
+  const saveMedicationBtn=document.getElementById("saveMedication");
+  const cancelMedicationBtn=document.getElementById("cancelMedication");
+  const medicationListEl=document.getElementById("medicationList");
+    const healthMemoEl=document.getElementById("healthMemo");
   const healthMsgEl=document.getElementById("healthMsg");
   const healthSaveStateEl=document.getElementById("healthSaveState");
   const saveHealthBtn=document.getElementById("saveHealth");
@@ -767,6 +841,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const cloudStatusEl=document.getElementById("cloudStatus");
   let selectedWeekOffset=0;
   let selectedMonthOffset=0;
+  let selectedMedicationCategory="";
+  let editingMedicationId=null;
 
   let cloudClient=null;
   let cloudUser=null;
@@ -1748,7 +1824,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const monthValue=selectedHealthReportMonth();
     const url=new URL("report.html",window.location.href);
     url.searchParams.set("month",monthValue);
-    url.searchParams.set("v","17.20");
+    url.searchParams.set("v","17.21");
     const opened=window.open(url.toString(),"_blank");
     if(!opened){
       window.location.href=url.toString();
@@ -1869,6 +1945,132 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     periodClosedEl.classList.remove("is-hidden");
   }
 
+  const MEDICATION_CATEGORY_LABELS={
+    pill:"ピル",
+    painkiller:"鎮痛剤",
+    supplement:"サプリ",
+    kampo:"漢方",
+    other:"その他"
+  };
+
+  function resetMedicationEditor(){
+    selectedMedicationCategory="";
+    editingMedicationId=null;
+    medicationNameEl.value="";
+    medicationTimeEl.value="";
+    medicationSelectedEl.textContent="";
+    medicationEditorEl.classList.add("is-hidden");
+    document.querySelectorAll("[data-med-category]").forEach(btn=>btn.classList.remove("is-selected"));
+  }
+
+  function openMedicationEditor(category,record=null){
+    selectedMedicationCategory=category;
+    editingMedicationId=record&&record.id?record.id:null;
+    medicationNameEl.value=record&&record.name?record.name:"";
+    medicationTimeEl.value=record&&record.time?record.time:"";
+    medicationSelectedEl.textContent=(MEDICATION_CATEGORY_LABELS[category]||"服薬")+(editingMedicationId?"を編集":"を記録");
+    medicationEditorEl.classList.remove("is-hidden");
+    document.querySelectorAll("[data-med-category]").forEach(btn=>{
+      btn.classList.toggle("is-selected",btn.dataset.medCategory===category);
+    });
+    medicationNameEl.focus();
+  }
+
+  function medicationRecordsForDate(data,date){
+    const h=(data.health&&data.health[date]&&typeof data.health[date]==="object")?data.health[date]:{};
+    return Array.isArray(h.medications)?h.medications:[];
+  }
+
+  function renderMedicationRecords(date){
+    const data=load();
+    const records=[...medicationRecordsForDate(data,date)].sort((a,b)=>{
+      const at=a.time||"99:99",bt=b.time||"99:99";
+      return at.localeCompare(bt)||String(a.createdAt||"").localeCompare(String(b.createdAt||""));
+    });
+    medicationListEl.innerHTML="";
+    if(!records.length){
+      medicationListEl.innerHTML='<div class="medication-empty">まだ服薬記録はありません</div>';
+      return;
+    }
+    records.forEach(record=>{
+      const row=document.createElement("div");
+      row.className="medication-record";
+      const safeName=escapeHtml(record.name||"");
+      const category=escapeHtml(MEDICATION_CATEGORY_LABELS[record.category]||"その他");
+      const time=record.time?escapeHtml(record.time):"";
+      row.innerHTML=
+        '<div class="medication-record-top">'+
+          '<div class="medication-record-main">'+
+            '<div class="medication-record-category">'+category+'</div>'+
+            '<div class="medication-record-name">'+safeName+'</div>'+
+          '</div>'+
+          (time?'<div class="medication-record-time">'+time+'</div>':"")+
+        '</div>'+
+        '<div class="medication-record-actions">'+
+          '<button class="secondary" type="button" data-med-edit="'+escapeHtml(record.id)+'">編集</button>'+
+          '<button class="secondary" type="button" data-med-delete="'+escapeHtml(record.id)+'">削除</button>'+
+        '</div>';
+      medicationListEl.appendChild(row);
+    });
+  }
+
+  function saveMedicationRecord(){
+    const date=healthDateEl.value||dateKey();
+    const category=selectedMedicationCategory;
+    const name=(medicationNameEl.value||"").trim();
+    const time=(medicationTimeEl.value||"").trim();
+    if(!category){
+      healthMsgEl.textContent="服薬の種類を選択してください。";
+      return;
+    }
+    if(!name){
+      healthMsgEl.textContent="薬名・メモを入力してください。";
+      medicationNameEl.focus();
+      return;
+    }
+
+    const data=load();
+    data.health=data.health||{};
+    const previous=(data.health[date]&&typeof data.health[date]==="object")?data.health[date]:{};
+    const medications=Array.isArray(previous.medications)?[...previous.medications]:[];
+
+    if(editingMedicationId){
+      const index=medications.findIndex(x=>x&&x.id===editingMedicationId);
+      if(index>=0){
+        medications[index]={...medications[index],category,name,time,updatedAt:Date.now()};
+      }
+    }else{
+      medications.push({
+        id:"med-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),
+        category,
+        name,
+        time,
+        createdAt:Date.now()
+      });
+    }
+
+    data.health[date]={...previous,medications};
+    save(data);
+    resetMedicationEditor();
+    renderMedicationRecords(date);
+    healthMsgEl.textContent="服薬記録を保存しました。";
+    updateHealthSaveState(false);
+  }
+
+  function deleteMedicationRecord(id){
+    const date=healthDateEl.value||dateKey();
+    const data=load();
+    data.health=data.health||{};
+    const previous=(data.health[date]&&typeof data.health[date]==="object")?data.health[date]:{};
+    const medications=(Array.isArray(previous.medications)?previous.medications:[]).filter(x=>x&&x.id!==id);
+    data.health[date]={...previous,medications};
+    save(data);
+    if(editingMedicationId===id) resetMedicationEditor();
+    renderMedicationRecords(date);
+    healthMsgEl.textContent="服薬記録を削除しました。";
+    updateHealthSaveState(false);
+  }
+
   function loadHealthForm(date){
     const data=load();
     const h=(data.health||{})[date]||{};
@@ -1880,6 +2082,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     conditionEl.value=h.condition?String(h.condition):"";
     healthMemoEl.value=h.memo||"";
     loadFemaleHealth(h);
+    resetMedicationEditor();
+    renderMedicationRecords(date);
     updatePeriodUi(data,date);
     healthMsgEl.textContent="";
     updateHealthSaveState(false);
@@ -2420,6 +2624,24 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       btn.setAttribute("aria-pressed",btn.classList.contains("is-selected")?"true":"false");
       updateHealthSaveState(true);
     });
+  });
+
+  document.querySelectorAll("[data-med-category]").forEach(btn=>{
+    btn.addEventListener("click",()=>openMedicationEditor(btn.dataset.medCategory));
+  });
+  saveMedicationBtn.addEventListener("click",saveMedicationRecord);
+  cancelMedicationBtn.addEventListener("click",resetMedicationEditor);
+  medicationListEl.addEventListener("click",e=>{
+    const edit=e.target.closest("[data-med-edit]");
+    const del=e.target.closest("[data-med-delete]");
+    const date=healthDateEl.value||dateKey();
+    if(edit){
+      const id=edit.dataset.medEdit;
+      const record=medicationRecordsForDate(load(),date).find(x=>x&&x.id===id);
+      if(record) openMedicationEditor(record.category||"other",record);
+      return;
+    }
+    if(del) deleteMedicationRecord(del.dataset.medDelete);
   });
 
   healthDateEl.addEventListener("change",()=>{
