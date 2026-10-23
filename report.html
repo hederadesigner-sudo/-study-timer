@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>体調管理 月次レポート</title>
+<style>
+:root{
+  --bg:#f3f4f7;--card:#fff;--text:#172033;--muted:#697386;--line:#dfe3e9;
+  --accent:#6758e8;--accent-soft:#efedff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:18px 14px 40px}
+.toolbar{position:sticky;top:0;z-index:10;background:rgba(243,244,247,.94);backdrop-filter:blur(12px);padding:10px 0 12px;display:flex;gap:8px;flex-wrap:wrap}
+button,a.btn{min-height:48px;border-radius:14px;border:1px solid #d8dee8;background:#fff;color:var(--text);font:inherit;font-weight:800;padding:0 16px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.report-sheet{background:#fff;border-radius:18px;padding:22px;box-shadow:0 10px 30px rgba(23,32,51,.07)}
+h1{font-size:24px;margin:0 0 6px}
+.summary{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px}
+table{width:900px;border-collapse:collapse;table-layout:fixed;font-size:11px}
+th,td{border:1px solid var(--line);padding:7px 6px;vertical-align:top;word-break:break-word}
+th{background:#f3f5f8;font-weight:800;text-align:center}
+th:nth-child(1),td:nth-child(1){width:8%}
+th:nth-child(2),td:nth-child(2){width:14%}
+th:nth-child(3),td:nth-child(3){width:17%}
+th:nth-child(4),td:nth-child(4){width:8%;text-align:center}
+th:nth-child(5),td:nth-child(5){width:30%}
+th:nth-child(6),td:nth-child(6){width:23%}
+.female,.memo{white-space:pre-wrap;line-height:1.5}
+.status{margin-top:12px;font-size:12px;color:var(--muted);min-height:18px}
+.note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:12px}
+.loading{padding:40px;text-align:center;color:var(--muted)}
+@media(max-width:520px){
+  .wrap{padding:10px 10px 32px}
+  .report-sheet{padding:14px;border-radius:14px}
+  h1{font-size:20px}
+  .toolbar button,.toolbar a{flex:1 1 160px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="toolbar">
+    <a class="btn" href="./">← アプリに戻る</a>
+    <button class="primary" id="savePdf" type="button">PDFファイルとして保存</button>
+  </div>
+
+  <div id="reportRoot" class="report-sheet">
+    <div class="loading">月次レポートを読み込んでいます…</div>
+  </div>
+  <div id="status" class="status"></div>
+  <div class="note">このWebプレビューは、同じブラウザまたは同じSupabaseログイン状態の保存データを読み込んで表示します。URLだけを別の人に送っても、あなたの体調データは公開されません。</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+(() => {
+  const KEY="study_timer_15min_v5";
+  const SUPABASE_URL="https://aluvrythpkdzrjimovqk.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY="sb_publishable_191VvG8MB46w_m_Zg1cJRA_xNTv237N";
+  const root=document.getElementById("reportRoot");
+  const status=document.getElementById("status");
+  const savePdfBtn=document.getElementById("savePdf");
+
+  function escapeHtml(value){
+    return String(value??"")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+  }
+
+  function dateKey(d=new Date()){
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,"0");
+    const day=String(d.getDate()).padStart(2,"0");
+    return y+"-"+m+"-"+day;
+  }
+
+  function fmtMin(sec){
+    sec=Math.max(0,Math.round(Number(sec)||0));
+    const min=Math.round(sec/60);
+    const h=Math.floor(min/60);
+    const m=min%60;
+    if(h&&m) return h+"時間"+m+"分";
+    if(h) return h+"時間";
+    return m+"分";
+  }
+
+  function conditionLabel(value){
+    const map={1:"かなり悪い",2:"悪い",3:"普通",4:"良い",5:"とても良い"};
+    return map[Number(value)]||"";
+  }
+
+  function femaleLabel(type,value){
+    const maps={
+      periodPain:{none:"なし",mild:"少し痛い",painful:"痛い",severe:"激痛"},
+      periodFlow:{low:"少ない",slightly_low:"やや少ない",normal:"ふつう",slightly_high:"やや多い",high:"多い"},
+      dischargeAmount:{none:"なし",little:"少ない",normal:"ふつう",much:"多い"},
+      dischargeState:{sticky:"ねばねば",creamy:"クリーム状",thick:"とろみ",watery:"水っぽい",crumbly:"ぽろぽろ"},
+      dischargeColor:{clear:"透明",white:"白",yellow:"黄色",pink:"ピンク",brown:"茶色"},
+      delicateSymptoms:{dryness:"乾燥",humid:"ムレ",itch:"かゆみ",odor:"におい",pain:"痛み",irritation:"ヒリヒリ"}
+    };
+    return (maps[type]&&maps[type][value])||"";
+  }
+
+  function normalizeData(raw){
+    const d=(raw&&typeof raw==="object")?raw:{};
+    if(!d.health||typeof d.health!=="object") d.health={};
+    if(!Array.isArray(d.periodRanges)) d.periodRanges=[];
+    if(typeof d.periodOpenStart!=="string") d.periodOpenStart="";
+    if(!Array.isArray(d.activitySessions)) d.activitySessions=[];
+    return d;
+  }
+
+  function loadLocal(){
+    try{
+      const raw=localStorage.getItem(KEY);
+      return raw?normalizeData(JSON.parse(raw)):normalizeData({});
+    }catch(e){
+      return normalizeData({});
+    }
+  }
+
+  async function loadCloudFallback(localData){
+    try{
+      if(!window.supabase||!window.supabase.createClient) return localData;
+      const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+        auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+      });
+      const {data:{session}}=await client.auth.getSession();
+      if(!session||!session.user) return localData;
+      const {data,error}=await client.from("app_state").select("state").eq("user_id",session.user.id).maybeSingle();
+      if(error||!data||!data.state) return localData;
+      const cloud=normalizeData(data.state);
+      const hasLocal=Object.keys(localData.health||{}).length || (localData.activitySessions||[]).length || (localData.periodRanges||[]).length;
+      return hasLocal?localData:cloud;
+    }catch(e){
+      return localData;
+    }
+  }
+
+  function activitySecondsForDate(data,date,category){
+    let sec=0;
+    (data.activitySessions||[]).forEach(x=>{
+      if(!x||x.date!==date||x.category!==category) return;
+      const a=Number(x.start||0),b=Number(x.end||0);
+      if(b>a) sec+=(b-a)/1000;
+    });
+    if(category==="sleep"&&data.activityRunning&&data.activityRunning.category==="sleep"&&date===dateKey()){
+      const a=Number(data.activityRunning.startedAt||0);
+      if(a>0) sec+=Math.max(0,(Date.now()-a)/1000);
+    }
+    return sec;
+  }
+
+  function periodRangeForDate(data,date){
+    const closed=(data.periodRanges||[]).find(r=>r&&r.start&&r.end&&r.start<=date&&date<=r.end);
+    if(closed) return closed;
+    const open=data.periodOpenStart||"";
+    if(open&&open<=date&&date<=dateKey()) return {start:open,end:dateKey(),open:true};
+    return null;
+  }
+
+  function monthValue(){
+    const q=new URLSearchParams(location.search).get("month")||"";
+    return /^\d{4}-\d{2}$/.test(q)?q:dateKey().slice(0,7);
+  }
+
+  function buildRows(data,year,month){
+    const daysInMonth=new Date(year,month,0).getDate();
+    let totalSleep=0,sleepDays=0;
+    const rows=[];
+
+    for(let day=1;day<=daysInMonth;day++){
+      const k=year+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+      const sleep=activitySecondsForDate(data,k,"sleep");
+      if(sleep>0){totalSleep+=sleep;sleepDays++}
+      const h=(data.health||{})[k]||{};
+      const f=(h.femaleHealth&&typeof h.femaleHealth==="object")?h.femaleHealth:{};
+      const bits=[];
+
+      const pain=femaleLabel("periodPain",f.periodPain);
+      if(pain) bits.push("生理痛："+pain);
+      const flow=femaleLabel("periodFlow",f.periodFlow);
+      if(flow) bits.push("経血量："+flow);
+
+      const discharge=[
+        femaleLabel("dischargeAmount",f.dischargeAmount),
+        femaleLabel("dischargeState",f.dischargeState),
+        femaleLabel("dischargeColor",f.dischargeColor)
+      ].filter(Boolean).join("・");
+      if(discharge) bits.push("おりもの："+discharge);
+
+      if(f.abnormalBleeding==="yes") bits.push("不正出血：あり");
+
+      const delicate=(Array.isArray(f.delicateSymptoms)?f.delicateSymptoms:[])
+        .map(v=>femaleLabel("delicateSymptoms",v)).filter(Boolean).join("・");
+      if(delicate) bits.push("デリケートゾーン："+delicate);
+
+      rows.push({
+        day,sleep,
+        condition:h.condition||"",
+        period:!!periodRangeForDate(data,k),
+        female:bits.join("\n"),
+        memo:h.memo||""
+      });
+    }
+    return {rows,totalSleep,sleepDays};
+  }
+
+  function render(data){
+    const mv=monthValue();
+    const [year,month]=mv.split("-").map(Number);
+    const {rows,totalSleep,sleepDays}=buildRows(data,year,month);
+    const avg=sleepDays?Math.round(totalSleep/sleepDays):0;
+    const body=rows.map(r=>`
+      <tr>
+        <td>${r.day}日</td>
+        <td>${r.sleep?escapeHtml(fmtMin(r.sleep)):""}</td>
+        <td>${r.condition?escapeHtml(String(r.condition)+" "+conditionLabel(r.condition)):""}</td>
+        <td>${r.period?"●":""}</td>
+        <td class="female">${escapeHtml(r.female)}</td>
+        <td class="memo">${escapeHtml(r.memo)}</td>
+      </tr>`).join("");
+
+    root.innerHTML=`
+      <h1>体調管理　${year}年${month}月</h1>
+      <div class="summary">睡眠合計：${escapeHtml(fmtMin(totalSleep))}　／　睡眠記録日の平均：${sleepDays?escapeHtml(fmtMin(avg)):"未記録"}　／　生理：●</div>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr><th>日付</th><th>睡眠</th><th>体調</th><th>生理</th><th>女性記録</th><th>メモ</th></tr>
+          </thead>
+          <tbody>${body}</tbody>
+        </table>
+      </div>`;
+    document.title="体調管理_"+year+"年"+String(month).padStart(2,"0")+"月";
+  }
+
+  async function savePdf(){
+    if(typeof html2canvas!=="function"||!window.jspdf||!window.jspdf.jsPDF){
+      status.textContent="PDF作成機能を読み込めませんでした。再読み込みしてください。";
+      return;
+    }
+
+    const mv=monthValue();
+    const [year,month]=mv.split("-").map(Number);
+    const old=savePdfBtn.textContent;
+    savePdfBtn.disabled=true;
+    savePdfBtn.textContent="PDFを作成中…";
+    status.textContent="PDFファイルを作成しています。";
+
+    try{
+      const canvas=await html2canvas(root,{scale:1.5,backgroundColor:"#ffffff",logging:false,useCORS:true});
+      const {jsPDF}=window.jspdf;
+      const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4",compress:true});
+      const margin=8,pageWidth=210,pageHeight=297;
+      const contentWidth=pageWidth-margin*2,contentHeight=pageHeight-margin*2;
+      const pxPerMm=canvas.width/contentWidth;
+      const pagePx=Math.max(1,Math.floor(contentHeight*pxPerMm));
+      let y=0,page=0;
+
+      while(y<canvas.height){
+        const h=Math.min(pagePx,canvas.height-y);
+        const part=document.createElement("canvas");
+        part.width=canvas.width;part.height=h;
+        const ctx=part.getContext("2d");
+        ctx.fillStyle="#fff";ctx.fillRect(0,0,part.width,part.height);
+        ctx.drawImage(canvas,0,y,canvas.width,h,0,0,canvas.width,h);
+        const img=part.toDataURL("image/jpeg",0.92);
+        if(page>0) pdf.addPage();
+        pdf.addImage(img,"JPEG",margin,margin,contentWidth,h/pxPerMm,"","FAST");
+        y+=h;page++;
+      }
+
+      const blob=pdf.output("blob");
+      const filename="体調管理_"+year+"年"+String(month).padStart(2,"0")+"月.pdf";
+      const file=new File([blob],filename,{type:"application/pdf"});
+      let handled=false;
+
+      try{
+        if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+          await navigator.share({files:[file],title:"体調管理 "+year+"年"+month+"月"});
+          handled=true;
+          status.textContent="PDFを作成しました。";
+        }
+      }catch(e){
+        if(e&&e.name==="AbortError"){handled=true;status.textContent="共有をキャンセルしました。"}
+      }
+
+      if(!handled){
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement("a");
+        a.href=url;a.download=filename;
+        document.body.appendChild(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),3000);
+        status.textContent="PDFファイルを保存しました。";
+      }
+    }catch(e){
+      status.textContent="PDFファイルを作成できませんでした。";
+    }finally{
+      savePdfBtn.disabled=false;
+      savePdfBtn.textContent=old;
+    }
+  }
+
+  savePdfBtn.addEventListener("click",savePdf);
+
+  (async()=>{
+    const local=loadLocal();
+    const data=await loadCloudFallback(local);
+    render(data);
+  })();
+})();
+</script>
+</body>
+</html>
