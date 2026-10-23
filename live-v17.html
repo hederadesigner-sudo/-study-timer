@@ -312,6 +312,11 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .custom-activity-order{display:flex;gap:4px}
 .custom-activity-move{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:0!important;font-size:15px!important}
 .custom-activity-move:disabled{opacity:.28}
+.custom-activity-color{width:38px;height:34px;min-width:38px;border:1px solid #d8dee8;border-radius:10px;padding:2px;background:#fff;overflow:hidden}
+.custom-activity-color::-webkit-color-swatch-wrapper{padding:0}
+.custom-activity-color::-webkit-color-swatch{border:0;border-radius:7px}
+.custom-activity-color::-moz-color-swatch{border:0;border-radius:7px}
+.custom-activity-study{background:#f8f9fc}
 .custom-activity-rename{width:auto!important;min-width:64px!important;height:34px!important;min-height:34px!important;padding:0 10px!important;font-size:11px!important}
 .custom-activity-delete{width:auto!important;min-width:56px!important;height:34px!important;min-height:34px!important;padding:0 10px!important;font-size:11px!important;color:#b42318!important}
 .life-title{font-size:19px;font-weight:750;margin:0 0 6px}
@@ -475,7 +480,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.26</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.27</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -506,7 +511,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         <summary>活動の設定</summary>
         <div class="manual-body">
           <div class="custom-activity-panel-head">
-            <strong>活動の追加・並び替え</strong>
+            <strong>活動のカスタマイズ</strong>
             <button class="secondary custom-activity-close" id="closeCustomActivitySettings" type="button">閉じる</button>
           </div>
           <div class="life-field">
@@ -515,7 +520,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
           </div>
           <button class="secondary" id="addCustomActivity" type="button">活動を追加</button>
           <div class="custom-activity-list" id="customActivityList"></div>
-          <div class="small">睡眠・食事・休憩・お出かけ・追加した活動は、↑↓で並び替え・名前変更できます。「その他」は常に一番下です。</div>
+          <div class="small">活動は↑↓で並び替え、名前・色を変更できます。勉強は円グラフの色を変更できます。</div>
         </div>
       </details>
 
@@ -942,8 +947,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       deletedActivitySessionIds:[],
       customActivityCategories:[],
       customActivityCategoriesUpdatedAt:0,
-      activityOrder:["sleep","meal","break","outing"],
+      activityOrder:["sleep","meal","break","outing","other"],
       activityLabelOverrides:{},
+      activityColorOverrides:{},
       activitySettingsUpdatedAt:0,
       activityRunning:null,
       running:false,
@@ -1048,6 +1054,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       merged.activityOrder=Array.isArray(settingsSource.activityOrder)?[...settingsSource.activityOrder]:[];
       merged.activityLabelOverrides=(settingsSource.activityLabelOverrides&&typeof settingsSource.activityLabelOverrides==="object")
         ?{...settingsSource.activityLabelOverrides}:{};
+      merged.activityColorOverrides=(settingsSource.activityColorOverrides&&typeof settingsSource.activityColorOverrides==="object")
+        ?{...settingsSource.activityColorOverrides}:{};
       merged.activitySettingsUpdatedAt=Math.max(localSettingsTs,remoteSettingsTs);
     }else{
       merged.activityOrder=Array.isArray(local.activityOrder)&&local.activityOrder.length
@@ -1056,6 +1064,10 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       merged.activityLabelOverrides={
         ...(remote.activityLabelOverrides||{}),
         ...(local.activityLabelOverrides||{})
+      };
+      merged.activityColorOverrides={
+        ...(remote.activityColorOverrides||{}),
+        ...(local.activityColorOverrides||{})
       };
       merged.activitySettingsUpdatedAt=0;
     }
@@ -1140,6 +1152,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     if(!Number.isFinite(Number(d.customActivityCategoriesUpdatedAt))) d.customActivityCategoriesUpdatedAt=0;
     if(!Array.isArray(d.activityOrder)) d.activityOrder=["sleep","meal","break","outing"];
     if(!d.activityLabelOverrides || typeof d.activityLabelOverrides!=="object") d.activityLabelOverrides={};
+    if(!d.activityColorOverrides || typeof d.activityColorOverrides!=="object") d.activityColorOverrides={};
     if(!Number.isFinite(Number(d.activitySettingsUpdatedAt))) d.activitySettingsUpdatedAt=0;
     if(d.deletedActivitySessionIds.length){
       const deleted=new Set(d.deletedActivitySessionIds);
@@ -1440,18 +1453,27 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const CUSTOM_ACTIVITY_COLORS=["#e56b6f","#118ab2","#8f6fd1","#2a9d8f","#e9a03b","#5c7cfa","#c26dbc","#6c8c4d"];
 
   function activityMeta(data,category){
-    if(category==="other") return ACTIVITY_META.other;
+    const colorOverride=(data.activityColorOverrides||{})[category];
     if(ACTIVITY_META[category]){
-      const override=(data.activityLabelOverrides||{})[category];
-      return {...ACTIVITY_META[category],label:override||ACTIVITY_META[category].label};
+      const labelOverride=(data.activityLabelOverrides||{})[category];
+      return {
+        ...ACTIVITY_META[category],
+        label:labelOverride||ACTIVITY_META[category].label,
+        color:colorOverride||ACTIVITY_META[category].color
+      };
     }
     const custom=(data.customActivityCategories||[]).find(x=>x&&x.id===category);
-    if(custom) return {label:custom.label,color:custom.color||"#667085"};
-    return {label:"その他",color:"#9aa1ad"};
+    if(custom){
+      return {
+        label:custom.label,
+        color:colorOverride||custom.color||"#667085"
+      };
+    }
+    return {label:"その他",color:colorOverride||"#9aa1ad"};
   }
 
   function editableActivityKeys(data){
-    const base=["sleep","meal","break","outing"];
+    const base=["sleep","meal","break","outing","other"];
     const custom=(data.customActivityCategories||[]).map(x=>x.id);
     const available=new Set([...base,...custom]);
     const saved=Array.isArray(data.activityOrder)?data.activityOrder.filter(k=>available.has(k)):[];
@@ -1460,7 +1482,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   }
 
   function selectableActivityKeys(data){
-    return [...editableActivityKeys(data),"other"];
+    return editableActivityKeys(data);
   }
 
   function renderLifeCategoryOptions(data){
@@ -1478,7 +1500,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
     const settings=document.createElement("option");
     settings.value="__activity_settings__";
-    settings.textContent="⚙︎ 活動を追加・並び替え";
+    settings.textContent="⚙︎ 活動をカスタマイズ";
     lifeCategoryEl.appendChild(settings);
 
     const exists=[...lifeCategoryEl.options].some(op=>op.value===current&&op.value!=="__activity_settings__");
@@ -1498,10 +1520,36 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     customActivityDetailsEl.classList.add("is-hidden");
   }
 
+  function createActivityColorInput(data,key){
+    const color=document.createElement("input");
+    color.type="color";
+    color.className="custom-activity-color";
+    color.value=activityMeta(data,key).color||"#667085";
+    color.title="色を変更";
+    color.setAttribute("aria-label",activityMeta(data,key).label+"の色");
+    color.dataset.activityColor=key;
+    return color;
+  }
+
   function renderCustomActivityList(data){
     customActivityListEl.innerHTML="";
-    const keys=editableActivityKeys(data);
 
+    const studyRow=document.createElement("div");
+    studyRow.className="custom-activity-item custom-activity-study";
+    const studyDot=document.createElement("span");
+    studyDot.className="custom-activity-dot";
+    studyDot.style.background=activityMeta(data,"study").color;
+    const studyName=document.createElement("span");
+    studyName.className="custom-activity-name";
+    studyName.textContent="勉強";
+    const studyNote=document.createElement("span");
+    studyNote.className="small";
+    studyNote.textContent="勉強タイマー";
+    const studyColor=createActivityColorInput(data,"study");
+    studyRow.append(studyDot,studyName,studyNote,studyColor);
+    customActivityListEl.appendChild(studyRow);
+
+    const keys=editableActivityKeys(data);
     keys.forEach((key,index)=>{
       const meta=activityMeta(data,key);
       const isCustom=key.startsWith("custom-");
@@ -1540,13 +1588,15 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
       order.append(up,down);
 
+      const color=createActivityColorInput(data,key);
+
       const rename=document.createElement("button");
       rename.type="button";
       rename.className="secondary custom-activity-rename";
       rename.textContent="名前変更";
       rename.dataset.activityRename=key;
 
-      row.append(dot,name,order,rename);
+      row.append(dot,name,order,color,rename);
 
       if(isCustom){
         const del=document.createElement("button");
@@ -1559,20 +1609,25 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
       customActivityListEl.appendChild(row);
     });
+  }
 
-    const other=document.createElement("div");
-    other.className="custom-activity-item";
-    const otherDot=document.createElement("span");
-    otherDot.className="custom-activity-dot";
-    otherDot.style.background=ACTIVITY_META.other.color;
-    const otherName=document.createElement("span");
-    otherName.className="custom-activity-name";
-    otherName.textContent="その他";
-    const fixed=document.createElement("span");
-    fixed.className="small";
-    fixed.textContent="最下部に固定";
-    other.append(otherDot,otherName,fixed);
-    customActivityListEl.appendChild(other);
+  function setActivityColor(id,color){
+    if(!/^#[0-9a-f]{6}$/i.test(color||"")) return;
+    const data=load();
+    data.activityColorOverrides=data.activityColorOverrides||{};
+    const defaultColor=ACTIVITY_META[id]?ACTIVITY_META[id].color:"";
+    const custom=(data.customActivityCategories||[]).find(x=>x&&x.id===id);
+    const customDefault=custom?custom.color:"";
+    if(color.toLowerCase()===String(defaultColor||customDefault||"").toLowerCase()){
+      delete data.activityColorOverrides[id];
+    }else{
+      data.activityColorOverrides[id]=color;
+    }
+    data.activitySettingsUpdatedAt=Date.now();
+    save(data);
+    render();
+    openActivitySettings();
+    lifeMsgEl.textContent=activityMeta(data,id).label+"の色を変更しました。";
   }
 
   function moveActivityCategory(id,direction){
@@ -1666,6 +1721,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     }
     data.customActivityCategories=(data.customActivityCategories||[]).filter(x=>x&&x.id!==id);
     data.customActivityCategoriesUpdatedAt=Date.now();
+    if(data.activityColorOverrides) delete data.activityColorOverrides[id];
     data.activityOrder=editableActivityKeys(data).filter(k=>k!==id);
     data.activitySettingsUpdatedAt=Date.now();
     save(data);
@@ -2166,7 +2222,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const monthValue=selectedHealthReportMonth();
     const url=new URL("report.html",window.location.href);
     url.searchParams.set("month",monthValue);
-    url.searchParams.set("v","17.26");
+    url.searchParams.set("v","17.27");
     const opened=window.open(url.toString(),"_blank");
     if(!opened){
       window.location.href=url.toString();
@@ -2669,6 +2725,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       customActivityCategoriesUpdatedAt:Number(data.customActivityCategoriesUpdatedAt||0),
       activityOrder:[...(data.activityOrder||[])],
       activityLabelOverrides:{...(data.activityLabelOverrides||{})},
+      activityColorOverrides:{...(data.activityColorOverrides||{})},
       activitySettingsUpdatedAt:Number(data.activitySettingsUpdatedAt||0),
       activityRunning:data.activityRunning||null
     };
@@ -2754,6 +2811,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         if(Array.isArray(parsed.activityOrder)) data.activityOrder=[...parsed.activityOrder];
         if(parsed.activityLabelOverrides&&typeof parsed.activityLabelOverrides==="object"){
           data.activityLabelOverrides={...parsed.activityLabelOverrides};
+        }
+        if(parsed.activityColorOverrides&&typeof parsed.activityColorOverrides==="object"){
+          data.activityColorOverrides={...parsed.activityColorOverrides};
         }
         data.activitySettingsUpdatedAt=Number(parsed.activitySettingsUpdatedAt||Date.now());
       }
@@ -2992,6 +3052,10 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     }
     const del=e.target.closest("[data-custom-activity-delete]");
     if(del) deleteCustomActivity(del.dataset.customActivityDelete);
+  });
+  customActivityListEl.addEventListener("change",e=>{
+    const color=e.target.closest("[data-activity-color]");
+    if(color) setActivityColor(color.dataset.activityColor,color.value);
   });
 
   document.querySelectorAll("[data-single-group] .female-chip").forEach(btn=>{
