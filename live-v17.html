@@ -432,7 +432,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.14</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.15</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -640,6 +640,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       <div class="small">体調・睡眠・生理・おりもの・不正出血・デリケートゾーン・メモを1ヶ月分の表にまとめて出力します。</div>
       <div class="health-report-row">
         <input id="healthReportMonth" type="month">
+        <button class="secondary" id="previewHealthReport" type="button">Webでプレビュー</button>
         <button class="secondary" id="exportHealthPdf" type="button">PDFファイルとして保存</button>
       </div>
     </div>
@@ -742,6 +743,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const healthSaveStateEl=document.getElementById("healthSaveState");
   const saveHealthBtn=document.getElementById("saveHealth");
   const healthReportMonthEl=document.getElementById("healthReportMonth");
+  const previewHealthReportBtn=document.getElementById("previewHealthReport");
   const exportHealthPdfBtn=document.getElementById("exportHealthPdf");
   const lifeDateEl=document.getElementById("lifeDate");
   const lifeCategoryEl=document.getElementById("lifeCategory");
@@ -1733,20 +1735,31 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return (maps[type]&&maps[type][value])||"";
   }
 
-  async function exportHealthMonthPdf(){
+  function selectedHealthReportMonth(){
     let monthValue=(healthReportMonthEl&&healthReportMonthEl.value)||"";
-
     if(!/^\d{4}-\d{2}$/.test(monthValue)){
       const selectedDate=(healthDateEl&&healthDateEl.value)||(lifeDateEl&&lifeDateEl.value)||dateKey();
-      if(/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)){
-        monthValue=selectedDate.slice(0,7);
-        if(healthReportMonthEl) healthReportMonthEl.value=monthValue;
-      }
+      if(/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) monthValue=selectedDate.slice(0,7);
     }
-    if(!/^\d{4}-\d{2}$/.test(monthValue)){
-      monthValue=dateKey().slice(0,7);
-      if(healthReportMonthEl) healthReportMonthEl.value=monthValue;
+    if(!/^\d{4}-\d{2}$/.test(monthValue)) monthValue=dateKey().slice(0,7);
+    if(healthReportMonthEl) healthReportMonthEl.value=monthValue;
+    return monthValue;
+  }
+
+  function previewHealthMonthReport(){
+    const monthValue=selectedHealthReportMonth();
+    const url=new URL("report.html",window.location.href);
+    url.searchParams.set("month",monthValue);
+    const opened=window.open(url.toString(),"_blank");
+    if(!opened){
+      window.location.href=url.toString();
+      return;
     }
+    healthMsgEl.textContent=monthValue.replace("-","年")+"月のWebプレビューを開きました。";
+  }
+
+  async function exportHealthMonthPdf(){
+    const monthValue=selectedHealthReportMonth();
 
     if(typeof html2canvas!=="function" || !window.jspdf || !window.jspdf.jsPDF){
       healthMsgEl.textContent="PDF作成機能を読み込めませんでした。ページを再読み込みしてもう一度お試しください。";
@@ -2648,6 +2661,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   });
   savePeriodBtn.addEventListener("click",savePeriodRecord);
   deletePeriodBtn.addEventListener("click",deletePeriodRecord);
+  previewHealthReportBtn.addEventListener("click",previewHealthMonthReport);
   exportHealthPdfBtn.addEventListener("click",exportHealthMonthPdf);
 
   cloudSignInBtn.addEventListener("click",cloudSignIn);
