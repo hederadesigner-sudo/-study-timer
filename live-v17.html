@@ -406,7 +406,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.8</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.9</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -611,7 +611,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
     <div class="health-report">
       <div class="health-report-title">月次PDF</div>
-      <div class="small">体調・睡眠・生理・メモを1ヶ月分の表にまとめて出力します。</div>
+      <div class="small">体調・睡眠・生理・おりもの・不正出血・デリケートゾーン・メモを1ヶ月分の表にまとめて出力します。</div>
       <div class="health-report-row">
         <input id="healthReportMonth" type="month">
         <button class="secondary" id="exportHealthPdf" type="button">1ヶ月分をPDF出力</button>
@@ -1681,9 +1681,33 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return map[Number(value)]||"";
   }
 
+  function femalePdfLabel(type,value){
+    const maps={
+      periodPain:{
+        none:"なし",mild:"少し痛い",painful:"痛い",severe:"激痛"
+      },
+      periodFlow:{
+        low:"少ない",slightly_low:"やや少ない",normal:"ふつう",slightly_high:"やや多い",high:"多い"
+      },
+      dischargeAmount:{
+        none:"なし",little:"少ない",normal:"ふつう",much:"多い"
+      },
+      dischargeState:{
+        sticky:"ねばねば",creamy:"クリーム状",thick:"とろみ",watery:"水っぽい",crumbly:"ぽろぽろ"
+      },
+      dischargeColor:{
+        clear:"透明",white:"白",yellow:"黄色",pink:"ピンク",brown:"茶色"
+      },
+      delicateSymptoms:{
+        dryness:"乾燥",humid:"ムレ",itch:"かゆみ",odor:"におい",pain:"痛み",irritation:"ヒリヒリ"
+      }
+    };
+    return (maps[type]&&maps[type][value])||"";
+  }
+
   function exportHealthMonthPdf(){
     const monthValue=healthReportMonthEl.value;
-    if(!/^\d{4}-\d{2}$/.test(monthValue)){
+    if(!/^\\d{4}-\\d{2}$/.test(monthValue)){
       healthMsgEl.textContent="PDFにする月を選択してください。";
       return;
     }
@@ -1700,62 +1724,102 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       const k=String(year)+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");
       const sleep=activitySecondsForDate(data,k,"sleep");
       const h=(data.health||{})[k]||{};
+      const female=(h.femaleHealth&&typeof h.femaleHealth==="object")?h.femaleHealth:{};
       const period=!!periodRangeForDate(data,k);
       if(sleep>0){ totalSleep+=sleep; sleepDays++; }
+
+      const discharge=[
+        femalePdfLabel("dischargeAmount",female.dischargeAmount),
+        femalePdfLabel("dischargeState",female.dischargeState),
+        femalePdfLabel("dischargeColor",female.dischargeColor)
+      ].filter(Boolean).join("・");
+
+      const delicate=(Array.isArray(female.delicateSymptoms)?female.delicateSymptoms:[])
+        .map(v=>femalePdfLabel("delicateSymptoms",v))
+        .filter(Boolean)
+        .join("・");
 
       rows.push({
         day,
         sleep,
         condition:h.condition||"",
         period,
+        periodPain:femalePdfLabel("periodPain",female.periodPain),
+        periodFlow:femalePdfLabel("periodFlow",female.periodFlow),
+        discharge,
+        abnormalBleeding:female.abnormalBleeding==="yes"?"あり":"",
+        delicate,
         memo:h.memo||""
       });
     }
 
     const avgSleep=sleepDays?Math.round(totalSleep/sleepDays):0;
+    const dash=v=>v?escapeHtml(String(v)):"—";
     const bodyRows=rows.map(r=>`
       <tr>
         <td>${r.day}日</td>
-        <td>${r.sleep?escapeHtml(fmtMin(r.sleep)):""}</td>
-        <td>${r.condition?escapeHtml(String(r.condition)+" "+conditionLabel(r.condition)):""}</td>
-        <td>${r.period?"●":""}</td>
-        <td class="memo">${escapeHtml(r.memo)}</td>
+        <td>${r.sleep?escapeHtml(fmtMin(r.sleep)):"—"}</td>
+        <td>${r.condition?escapeHtml(String(r.condition)+" "+conditionLabel(r.condition)):"—"}</td>
+        <td class="center">${r.period?"●":"—"}</td>
+        <td>${dash(r.periodPain)}</td>
+        <td>${dash(r.periodFlow)}</td>
+        <td>${dash(r.discharge)}</td>
+        <td class="center">${dash(r.abnormalBleeding)}</td>
+        <td>${dash(r.delicate)}</td>
+        <td class="memo">${r.memo?escapeHtml(r.memo):"—"}</td>
       </tr>`).join("");
 
     const html=`<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>体調・生理管理 ${year}年${month}月</title>
+<title>体調管理 ${year}年${month}月</title>
 <style>
-@page{size:A4 portrait;margin:12mm}
+@page{size:A4 landscape;margin:9mm}
 *{box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;color:#172033;margin:0}
-h1{font-size:20px;margin:0 0 6px}
-.summary{font-size:11px;color:#5f6878;margin-bottom:10px}
-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}
-th,td{border:1px solid #cfd5df;padding:5px 4px;vertical-align:top}
-th{background:#f2f4f7;font-weight:700}
-th:nth-child(1),td:nth-child(1){width:9%}
-th:nth-child(2),td:nth-child(2){width:17%}
-th:nth-child(3),td:nth-child(3){width:20%}
-th:nth-child(4),td:nth-child(4){width:10%;text-align:center}
-th:nth-child(5),td:nth-child(5){width:44%}
-.memo{white-space:pre-wrap;word-break:break-word}
+h1{font-size:18px;margin:0 0 5px}
+.summary{font-size:10px;color:#5f6878;margin-bottom:8px}
+table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.5px}
+th,td{border:1px solid #cfd5df;padding:4px 3px;vertical-align:top;word-break:break-word}
+th{background:#f2f4f7;font-weight:700;text-align:center}
+.center{text-align:center}
+th:nth-child(1),td:nth-child(1){width:5%}
+th:nth-child(2),td:nth-child(2){width:8%}
+th:nth-child(3),td:nth-child(3){width:9%}
+th:nth-child(4),td:nth-child(4){width:5%}
+th:nth-child(5),td:nth-child(5){width:8%}
+th:nth-child(6),td:nth-child(6){width:8%}
+th:nth-child(7),td:nth-child(7){width:15%}
+th:nth-child(8),td:nth-child(8){width:8%}
+th:nth-child(9),td:nth-child(9){width:14%}
+th:nth-child(10),td:nth-child(10){width:20%}
+.memo{white-space:pre-wrap}
 .period-dot{color:#d95686}
-footer{margin-top:8px;font-size:8px;color:#7a8391}
+footer{margin-top:6px;font-size:7px;color:#7a8391}
 </style>
 </head>
 <body>
-<h1>体調・生理管理　${year}年${month}月</h1>
+<h1>体調管理　${year}年${month}月</h1>
 <div class="summary">睡眠合計：${escapeHtml(fmtMin(totalSleep))}　／　睡眠記録日の平均：${sleepDays?escapeHtml(fmtMin(avgSleep)):"未記録"}　／　生理：●</div>
 <table>
   <thead>
-    <tr><th>日付</th><th>睡眠</th><th>体調</th><th>生理</th><th>メモ</th></tr>
+    <tr>
+      <th>日付</th>
+      <th>睡眠</th>
+      <th>体調</th>
+      <th>生理</th>
+      <th>生理痛</th>
+      <th>経血量</th>
+      <th>おりもの<br>量・状態・色</th>
+      <th>不正出血</th>
+      <th>デリケートゾーン</th>
+      <th>メモ</th>
+    </tr>
   </thead>
   <tbody>${bodyRows}</tbody>
 </table>
-<footer>勉強・生活時間記録から作成</footer>
+<footer>勉強・生活時間・体調記録から作成</footer>
 <script>
 window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
 <\/script>
@@ -1770,7 +1834,7 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
     w.document.open();
     w.document.write(html);
     w.document.close();
-    healthMsgEl.textContent="PDF出力画面を開きました。印刷画面からPDFとして保存できます。";
+    healthMsgEl.textContent="女性の体調記録を含むPDF出力画面を開きました。印刷画面からPDFとして保存できます。";
   }
 
   function femaleSingleValue(group){
