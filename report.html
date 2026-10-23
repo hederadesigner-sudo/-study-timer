@@ -22,13 +22,14 @@ h1{font-size:20px;margin:0 0 6px}
 table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.5px}
 th,td{border:1px solid #cfd5df;padding:5px 4px;vertical-align:top;word-break:break-word}
 th{background:#f2f4f7;font-weight:700;text-align:left}
-th:nth-child(1),td:nth-child(1){width:8%}
-th:nth-child(2),td:nth-child(2){width:14%}
-th:nth-child(3),td:nth-child(3){width:17%}
-th:nth-child(4),td:nth-child(4){width:8%;text-align:center}
-th:nth-child(5),td:nth-child(5){width:30%}
-th:nth-child(6),td:nth-child(6){width:23%}
-.female,.memo{white-space:pre-wrap;line-height:1.35}
+th:nth-child(1),td:nth-child(1){width:6%}
+th:nth-child(2),td:nth-child(2){width:11%}
+th:nth-child(3),td:nth-child(3){width:12%}
+th:nth-child(4),td:nth-child(4){width:20%}
+th:nth-child(5),td:nth-child(5){width:6%;text-align:center}
+th:nth-child(6),td:nth-child(6){width:27%}
+th:nth-child(7),td:nth-child(7){width:18%}
+.medication,.female,.memo{white-space:pre-wrap;line-height:1.35}
 .status{margin-top:12px;font-size:12px;color:var(--muted);min-height:18px}
 .note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:12px}
 .loading{padding:40px;text-align:center;color:var(--muted)}
@@ -95,6 +96,26 @@ th:nth-child(6),td:nth-child(6){width:23%}
   function conditionLabel(value){
     const map={1:"かなり悪い",2:"悪い",3:"普通",4:"良い",5:"とても良い"};
     return map[Number(value)]||"";
+  }
+
+  const MEDICATION_CATEGORY_LABELS={
+    pill:"ピル",
+    painkiller:"鎮痛剤",
+    supplement:"サプリ",
+    kampo:"漢方",
+    other:"その他"
+  };
+
+  function medicationSummary(h){
+    const meds=Array.isArray(h&&h.medications)?[...h.medications]:[];
+    meds.sort((a,b)=>(a.time||"99:99").localeCompare(b.time||"99:99"));
+    return meds.map(m=>{
+      const parts=[];
+      if(m.time) parts.push(m.time);
+      if(m.name) parts.push(m.name);
+      const category=MEDICATION_CATEGORY_LABELS[m.category]||"その他";
+      return category+"："+parts.join(" ");
+    }).join("\n");
   }
 
   function femaleLabel(type,value){
@@ -206,6 +227,7 @@ th:nth-child(6),td:nth-child(6){width:23%}
       rows.push({
         day,sleep,
         condition:h.condition||"",
+        medication:medicationSummary(h),
         period:!!periodRangeForDate(data,k),
         female:bits.join("\n"),
         memo:h.memo||""
@@ -224,6 +246,7 @@ th:nth-child(6),td:nth-child(6){width:23%}
         <td>${r.day}日</td>
         <td>${r.sleep?escapeHtml(fmtMin(r.sleep)):""}</td>
         <td>${r.condition?escapeHtml(String(r.condition)+" "+conditionLabel(r.condition)):""}</td>
+        <td class="medication">${escapeHtml(r.medication)}</td>
         <td>${r.period?"●":""}</td>
         <td class="female">${escapeHtml(r.female)}</td>
         <td class="memo">${escapeHtml(r.memo)}</td>
@@ -235,7 +258,7 @@ th:nth-child(6),td:nth-child(6){width:23%}
       <div class="scroll">
         <table>
           <thead>
-            <tr><th>日付</th><th>睡眠</th><th>体調</th><th>生理</th><th>女性記録</th><th>メモ</th></tr>
+            <tr><th>日付</th><th>睡眠</th><th>体調</th><th>服薬</th><th>生理</th><th>女性記録</th><th>メモ</th></tr>
           </thead>
           <tbody>${body}</tbody>
         </table>
@@ -282,7 +305,7 @@ th:nth-child(6),td:nth-child(6){width:23%}
         .pdf-capture .scroll{overflow:visible!important;border:0!important;border-radius:0!important}
         .pdf-capture table{width:100%!important;table-layout:fixed!important;font-size:9px!important}
         .pdf-capture th,.pdf-capture td{padding:3px 4px!important;line-height:1.12!important}
-        .pdf-capture .female,.pdf-capture .memo{line-height:1.12!important}
+        .pdf-capture .medication,.pdf-capture .female,.pdf-capture .memo{line-height:1.12!important}
       `;
       document.head.appendChild(captureStyle);
       document.body.appendChild(capture);
