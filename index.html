@@ -151,6 +151,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .checkline input{width:22px;height:22px;min-height:0;flex:0 0 22px;margin:0;padding:0}
 .health-summary{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:13px;line-height:1.55}
 .health-msg{margin-top:8px;font-size:12px;color:var(--muted);min-height:18px}
+.period-save-btn{margin-top:8px}
+.period-delete-btn{margin-top:2px;color:#b42318;border-color:#f3c7c2}
 .health-sleep-total{
   width:100%;
   height:var(--control-h);
@@ -458,11 +460,15 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       <div class="field full">
         <label for="periodStart">生理開始日</label>
         <input id="periodStart" type="date">
+        <button class="secondary period-save-btn" id="savePeriodStart" type="button">開始日を保存</button>
       </div>
 
       <div class="field full">
         <label for="periodEnd">生理終了日</label>
         <input id="periodEnd" type="date">
+        <button class="secondary period-save-btn" id="savePeriodEnd" type="button">終了日を保存</button>
+        <div class="small">開始日を先に保存しておけば、終了日を記録するときに自動で開始日を表示します。</div>
+        <button class="secondary period-delete-btn" id="deletePeriod" type="button">この生理記録を削除</button>
       </div>
 
       <div class="field full">
@@ -471,7 +477,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       </div>
     </div>
 
-    <button class="primary" id="saveHealth" type="button" style="margin-top:10px">記録を保存</button>
+    <button class="primary" id="saveHealth" type="button" style="margin-top:10px">体調・メモを保存</button>
     <div class="health-msg" id="healthMsg"></div>
 
     <div class="health-report">
@@ -567,6 +573,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const conditionEl=document.getElementById("condition");
   const periodStartEl=document.getElementById("periodStart");
   const periodEndEl=document.getElementById("periodEnd");
+  const savePeriodStartBtn=document.getElementById("savePeriodStart");
+  const savePeriodEndBtn=document.getElementById("savePeriodEnd");
+  const deletePeriodBtn=document.getElementById("deletePeriod");
   const healthMemoEl=document.getElementById("healthMemo");
   const healthMsgEl=document.getElementById("healthMsg");
   const saveHealthBtn=document.getElementById("saveHealth");
@@ -641,6 +650,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       weekMinimums:{[LAST_WEEK_KEY]:LAST_WEEK_MIN_SECONDS},
       health:{},
       periodRanges:[],
+      periodOpenStart:"",
       periodMigrationDone:true,
       periodRangesUpdatedAt:0,
       activitySessions:[],
@@ -689,9 +699,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     if(localPeriodTs||remotePeriodTs){
       const periodSource=localPeriodTs>=remotePeriodTs?local:remote;
       merged.periodRanges=normalizePeriodRanges([...(periodSource.periodRanges||[])]);
+      merged.periodOpenStart=typeof periodSource.periodOpenStart==="string"?periodSource.periodOpenStart:"";
       merged.periodRangesUpdatedAt=Math.max(localPeriodTs,remotePeriodTs);
     }else{
       merged.periodRanges=normalizePeriodRanges([...(remote.periodRanges||[]),...(local.periodRanges||[])]);
+      merged.periodOpenStart=(typeof local.periodOpenStart==="string"&&local.periodOpenStart)
+        ?local.periodOpenStart
+        :((typeof remote.periodOpenStart==="string"&&remote.periodOpenStart)?remote.periodOpenStart:"");
       merged.periodRangesUpdatedAt=0;
     }
     merged.periodMigrationDone=true;
@@ -772,6 +786,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     d.weekMinimums[LAST_WEEK_KEY]=Math.max(Number(d.weekMinimums[LAST_WEEK_KEY]||0),LAST_WEEK_MIN_SECONDS);
     if(!d.health || typeof d.health!=="object") d.health={};
     if(!Array.isArray(d.periodRanges)) d.periodRanges=[];
+    if(typeof d.periodOpenStart!=="string") d.periodOpenStart="";
     if(!("periodMigrationDone" in d)){
       if(d.periodRanges.length===0){
         const legacyPeriodDates=Object.entries(d.health)
@@ -1428,7 +1443,14 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   }
 
   function periodRangeForDate(data,date){
-    return (data.periodRanges||[]).find(r=>r&&r.start&&r.end&&r.start<=date&&date<=r.end)||null;
+    const closed=(data.periodRanges||[]).find(r=>r&&r.start&&r.end&&r.start<=date&&date<=r.end);
+    if(closed) return closed;
+    const openStart=typeof data.periodOpenStart==="string"?data.periodOpenStart:"";
+    const today=dateKey();
+    if(openStart&&openStart<=date&&date<=today){
+      return {start:openStart,end:today,open:true};
+    }
+    return null;
   }
 
   function normalizePeriodRanges(ranges){
@@ -1571,8 +1593,16 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
     conditionEl.value=h.condition?String(h.condition):"";
     healthMemoEl.value=h.memo||"";
     const range=periodRangeForDate(data,date);
-    periodStartEl.value=range?range.start:"";
-    periodEndEl.value=range?range.end:"";
+    if(range&&!range.open){
+      periodStartEl.value=range.start;
+      periodEndEl.value=range.end;
+    }else if(data.periodOpenStart){
+      periodStartEl.value=data.periodOpenStart;
+      periodEndEl.value="";
+    }else{
+      periodStartEl.value="";
+      periodEndEl.value="";
+    }
     healthMsgEl.textContent="";
   }
 
@@ -1584,34 +1614,87 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
       condition:conditionEl.value?Number(conditionEl.value):null,
       memo:(healthMemoEl.value||"").trim()
     };
-
-    const ps=periodStartEl.value;
-    const pe=periodEndEl.value;
-    const beforeRanges=JSON.stringify(data.periodRanges||[]);
-
-    if(ps||pe){
-      if(!ps||!pe){
-        healthMsgEl.textContent="生理期間は開始日と終了日の両方を入力してください。";
-        return;
-      }
-      if(pe<ps){
-        healthMsgEl.textContent="生理終了日は開始日以降にしてください。";
-        return;
-      }
-      data.periodRanges=(data.periodRanges||[]).filter(r=>!(r.start<=pe&&ps<=r.end));
-      data.periodRanges.push({start:ps,end:pe});
-      data.periodRanges=normalizePeriodRanges(data.periodRanges);
-    }else{
-      data.periodRanges=(data.periodRanges||[]).filter(r=>!(r.start<=date&&date<=r.end));
-    }
-
-    if(JSON.stringify(data.periodRanges||[])!==beforeRanges){
-      data.periodRangesUpdatedAt=Date.now();
-      data.periodMigrationDone=true;
-    }
-
     save(data);
-    healthMsgEl.textContent="保存しました。";
+    healthMsgEl.textContent="体調・メモを保存しました。";
+    render();
+  }
+
+  function savePeriodStart(){
+    const start=periodStartEl.value;
+    if(!start){
+      healthMsgEl.textContent="生理開始日を入力してください。";
+      return;
+    }
+    const data=load();
+    data.periodOpenStart=start;
+    data.periodRangesUpdatedAt=Date.now();
+    data.periodMigrationDone=true;
+    save(data);
+    periodEndEl.value="";
+    healthMsgEl.textContent="生理開始日を保存しました。終了日はあとから記録できます。";
+    render();
+  }
+
+  function savePeriodEnd(){
+    const data=load();
+    const start=(data.periodOpenStart||periodStartEl.value||"").trim();
+    const end=periodEndEl.value;
+    if(!start){
+      healthMsgEl.textContent="先に生理開始日を保存してください。";
+      return;
+    }
+    if(!end){
+      periodStartEl.value=start;
+      healthMsgEl.textContent="生理終了日を入力してください。開始日は保存済みの日付を表示しています。";
+      return;
+    }
+    if(end<start){
+      healthMsgEl.textContent="生理終了日は開始日以降にしてください。";
+      return;
+    }
+
+    data.periodRanges=(data.periodRanges||[]).filter(r=>!(r.start<=end&&start<=r.end));
+    data.periodRanges.push({start,end});
+    data.periodRanges=normalizePeriodRanges(data.periodRanges);
+    data.periodOpenStart="";
+    data.periodRangesUpdatedAt=Date.now();
+    data.periodMigrationDone=true;
+    save(data);
+
+    periodStartEl.value=start;
+    periodEndEl.value=end;
+    healthMsgEl.textContent="生理終了日を保存しました。";
+    render();
+  }
+
+  function deletePeriodRecord(){
+    const date=healthDateEl.value||dateKey();
+    const data=load();
+    let changed=false;
+
+    const before=JSON.stringify(data.periodRanges||[]);
+    data.periodRanges=(data.periodRanges||[]).filter(r=>!(r.start<=date&&date<=r.end));
+    if(JSON.stringify(data.periodRanges)!==before) changed=true;
+
+    if(data.periodOpenStart){
+      const openStart=data.periodOpenStart;
+      if(date>=openStart || periodStartEl.value===openStart){
+        data.periodOpenStart="";
+        changed=true;
+      }
+    }
+
+    if(!changed){
+      healthMsgEl.textContent="削除する生理記録がありません。";
+      return;
+    }
+
+    data.periodRangesUpdatedAt=Date.now();
+    data.periodMigrationDone=true;
+    save(data);
+    periodStartEl.value="";
+    periodEndEl.value="";
+    healthMsgEl.textContent="生理記録を削除しました。";
     render();
   }
 
@@ -2028,6 +2111,9 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
     render();
   });
   saveHealthBtn.addEventListener("click",saveHealthRecord);
+  savePeriodStartBtn.addEventListener("click",savePeriodStart);
+  savePeriodEndBtn.addEventListener("click",savePeriodEnd);
+  deletePeriodBtn.addEventListener("click",deletePeriodRecord);
   exportHealthPdfBtn.addEventListener("click",exportHealthMonthPdf);
 
   cloudSignInBtn.addEventListener("click",cloudSignIn);
