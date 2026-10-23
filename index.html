@@ -159,6 +159,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .female-health-body{display:flex;flex-direction:column;gap:12px;padding:0 12px 12px}
 .female-health-card{border-radius:16px;background:#f8fafc;padding:14px}
 .female-health-section-title{font-size:16px;font-weight:850;margin-bottom:14px}
+.female-health-card .field{margin-top:10px}
+.female-health-card .female-period-end{margin-top:14px}
+.female-health-card .period-delete-btn{width:100%;margin-top:12px}
 .female-health-label{font-size:12px;font-weight:800;color:var(--text);margin:12px 0 7px}
 .female-chip-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .female-chip-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -395,7 +398,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.5</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.6</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -459,8 +462,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="healthCard">
-    <div class="health-title">体調・生理管理</div>
-    <div class="small">睡眠の合計時間、体調・メモ、生理期間を確認できます。睡眠時間は生活時間の「睡眠」記録から自動集計します。</div>
+    <div class="health-title">体調管理</div>
+    <div class="small">睡眠の合計時間や体調を記録できます。生理・おりもの・デリケートゾーンなど女性特有の体調記録は、必要なときだけ開いて入力できます。睡眠時間は生活時間の「睡眠」記録から自動集計します。</div>
 
     <div class="health-grid">
       <div class="field full">
@@ -485,26 +488,31 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         </select>
       </div>
 
-      <div class="field full">
-        <label for="periodStart">生理開始日</label>
-        <input id="periodStart" type="date">
-        <button class="secondary period-save-btn" id="savePeriodStart" type="button">開始日を保存</button>
-      </div>
-
-      <div class="field full">
-        <label for="periodEnd">生理終了日</label>
-        <input id="periodEnd" type="date">
-        <button class="secondary period-save-btn" id="savePeriodEnd" type="button">終了日を保存</button>
-        <div class="small">開始日を先に保存しておけば、終了日を記録するときに自動で開始日を表示します。</div>
-        <button class="secondary period-delete-btn" id="deletePeriod" type="button">この生理記録を削除</button>
-      </div>
-
       <details class="female-health" id="femaleHealthDetails">
         <summary>
           <span>女性の体調記録</span>
           <span class="female-health-summary-note">タップして開く</span>
         </summary>
         <div class="female-health-body">
+
+          <section class="female-health-card">
+            <div class="female-health-section-title">生理</div>
+
+            <div class="field full">
+              <label for="periodStart">生理開始日</label>
+              <input id="periodStart" type="date">
+              <button class="secondary period-save-btn" id="savePeriodStart" type="button">開始日を保存</button>
+            </div>
+
+            <div class="field full female-period-end">
+              <label for="periodEnd">生理終了日</label>
+              <input id="periodEnd" type="date">
+              <button class="secondary period-save-btn" id="savePeriodEnd" type="button">終了日を保存</button>
+              <div class="small">開始日を先に保存しておけば、終了日を記録するときに自動で開始日を表示します。</div>
+            </div>
+
+            <button class="secondary period-delete-btn" id="deletePeriod" type="button">この生理記録を削除</button>
+          </section>
 
           <section class="female-health-card">
             <div class="female-health-section-title">おりもの</div>
