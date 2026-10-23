@@ -150,6 +150,10 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .checkline{display:flex;align-items:center;gap:10px;width:100%;height:var(--control-h);min-height:var(--control-h);padding:0 16px;border:1px solid #d8dee8;border-radius:var(--control-radius);white-space:nowrap;background:#fff;box-shadow:none}
 .checkline input{width:22px;height:22px;min-height:0;flex:0 0 22px;margin:0;padding:0}
 .health-summary{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:13px;line-height:1.55}
+.health-save-state{margin-top:12px;padding:10px 12px;border-radius:12px;font-size:13px;font-weight:700;text-align:center;border:1px solid #d8dee8}
+.health-save-state.is-new{background:#f6f7f9;color:var(--muted)}
+.health-save-state.is-saved{background:#eef8f0;color:#277a3d;border-color:#cde8d3}
+.health-save-state.is-dirty{background:#fff6e6;color:#9a6500;border-color:#f1d59d}
 .health-msg{margin-top:8px;font-size:12px;color:var(--muted);min-height:18px}
 .period-save-btn{margin-top:8px}
 .period-delete-btn{margin-top:2px;color:#b42318;border-color:#f3c7c2}
@@ -477,7 +481,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       </div>
     </div>
 
-    <button class="primary" id="saveHealth" type="button" style="margin-top:10px">体調・メモを保存</button>
+    <div class="health-save-state is-new" id="healthSaveState">この日はまだ体調・メモを保存していません</div>
+    <button class="primary" id="saveHealth" type="button" style="margin-top:10px">体調・メモを新規保存</button>
     <div class="health-msg" id="healthMsg"></div>
 
     <div class="health-report">
@@ -578,6 +583,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const deletePeriodBtn=document.getElementById("deletePeriod");
   const healthMemoEl=document.getElementById("healthMemo");
   const healthMsgEl=document.getElementById("healthMsg");
+  const healthSaveStateEl=document.getElementById("healthSaveState");
   const saveHealthBtn=document.getElementById("saveHealth");
   const healthReportMonthEl=document.getElementById("healthReportMonth");
   const exportHealthPdfBtn=document.getElementById("exportHealthPdf");
@@ -1582,6 +1588,37 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
     healthMsgEl.textContent="PDF出力画面を開きました。印刷画面からPDFとして保存できます。";
   }
 
+  function hasSavedHealthRecord(data,date){
+    return !!(data&&data.health&&Object.prototype.hasOwnProperty.call(data.health,date));
+  }
+
+  function updateHealthSaveState(dirty=false){
+    if(!healthSaveStateEl||!saveHealthBtn) return;
+    const date=healthDateEl.value||dateKey();
+    const data=load();
+    const exists=hasSavedHealthRecord(data,date);
+
+    healthSaveStateEl.classList.remove("is-new","is-saved","is-dirty");
+
+    if(dirty){
+      healthSaveStateEl.classList.add("is-dirty");
+      healthSaveStateEl.textContent=exists
+        ?"変更があります。まだ更新していません"
+        :"入力中です。まだ保存していません";
+      saveHealthBtn.textContent=exists
+        ?"変更内容を更新"
+        :"体調・メモを新規保存";
+    }else if(exists){
+      healthSaveStateEl.classList.add("is-saved");
+      healthSaveStateEl.textContent="保存済みです。変更した場合は更新してください";
+      saveHealthBtn.textContent="体調・メモを更新";
+    }else{
+      healthSaveStateEl.classList.add("is-new");
+      healthSaveStateEl.textContent="この日はまだ体調・メモを保存していません";
+      saveHealthBtn.textContent="体調・メモを新規保存";
+    }
+  }
+
   function loadHealthForm(date){
     const data=load();
     const h=(data.health||{})[date]||{};
@@ -1604,18 +1641,25 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
       periodEndEl.value="";
     }
     healthMsgEl.textContent="";
+    updateHealthSaveState(false);
   }
 
   function saveHealthRecord(){
     const date=healthDateEl.value||dateKey();
     const data=load();
+    const existed=hasSavedHealthRecord(data,date);
     data.health=data.health||{};
     data.health[date]={
       condition:conditionEl.value?Number(conditionEl.value):null,
       memo:(healthMemoEl.value||"").trim()
     };
     save(data);
-    healthMsgEl.textContent="体調・メモを保存しました。";
+    const now=new Date();
+    const savedAt=String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+    healthMsgEl.textContent=existed
+      ?"更新しました（"+savedAt+"）"
+      :"新しく保存しました（"+savedAt+"）";
+    updateHealthSaveState(false);
     render();
   }
 
@@ -2110,6 +2154,8 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
     loadHealthForm(k);
     render();
   });
+  conditionEl.addEventListener("change",()=>updateHealthSaveState(true));
+  healthMemoEl.addEventListener("input",()=>updateHealthSaveState(true));
   saveHealthBtn.addEventListener("click",saveHealthRecord);
   savePeriodStartBtn.addEventListener("click",savePeriodStart);
   savePeriodEndBtn.addEventListener("click",savePeriodEnd);
