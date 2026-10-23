@@ -349,6 +349,17 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   .blocks{max-width:56px}
 }
 
+.health-report-preview{margin-top:16px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:12px}
+.health-report-preview-title{font-size:16px;font-weight:850;margin-bottom:4px}
+.health-report-preview-summary{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+.health-report-preview-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px}
+.health-report-preview table{width:980px;border-collapse:collapse;table-layout:fixed;font-size:10px;background:#fff}
+.health-report-preview th,.health-report-preview td{border:1px solid #d9dee6;padding:6px 5px;vertical-align:top;word-break:break-word}
+.health-report-preview th{background:#f3f5f8;font-weight:800;text-align:center}
+.health-report-preview .center{text-align:center}
+.health-report-preview .memo{white-space:pre-wrap}
+.health-report-preview-actions{margin-top:12px}
+.health-report-preview-actions button{width:100%}
 .print-report{display:none}
 @media print{
   @page{size:A4 landscape;margin:9mm}
@@ -432,7 +443,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.11</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.12</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -640,8 +651,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       <div class="small">体調・睡眠・生理・おりもの・不正出血・デリケートゾーン・メモを1ヶ月分の表にまとめて出力します。</div>
       <div class="health-report-row">
         <input id="healthReportMonth" type="month">
-        <button class="secondary" id="exportHealthPdf" type="button">1ヶ月分をPDF出力</button>
+        <button class="secondary" id="exportHealthPdf" type="button">1ヶ月分を表示</button>
       </div>
+      <div id="healthReportPreview" class="health-report-preview is-hidden"></div>
     </div>
   </div>
 
@@ -1735,20 +1747,12 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     let monthValue=(healthReportMonthEl&&healthReportMonthEl.value)||"";
 
     if(!/^\d{4}-\d{2}$/.test(monthValue)){
-      const localized=String(monthValue).match(/(\d{4})\D+(\d{1,2})/);
-      if(localized){
-        monthValue=localized[1]+"-"+String(localized[2]).padStart(2,"0");
-      }
-    }
-
-    if(!/^\d{4}-\d{2}$/.test(monthValue)){
       const selectedDate=(healthDateEl&&healthDateEl.value)||(lifeDateEl&&lifeDateEl.value)||dateKey();
       if(/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)){
         monthValue=selectedDate.slice(0,7);
         if(healthReportMonthEl) healthReportMonthEl.value=monthValue;
       }
     }
-
     if(!/^\d{4}-\d{2}$/.test(monthValue)){
       monthValue=dateKey().slice(0,7);
       if(healthReportMonthEl) healthReportMonthEl.value=monthValue;
@@ -1811,19 +1815,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         <td class="memo">${r.memo?escapeHtml(r.memo):"—"}</td>
       </tr>`).join("");
 
-    const report=document.getElementById("printReport");
-    if(!report){
-      healthMsgEl.textContent="PDF出力用の画面を準備できませんでした。";
-      return;
-    }
-
-    report.innerHTML=`
-      <h1>体調管理　${year}年${month}月</h1>
-      <div class="print-summary">
-        睡眠合計：${escapeHtml(fmtMin(totalSleep))}
-       　／　睡眠記録日の平均：${sleepDays?escapeHtml(fmtMin(avgSleep)):"未記録"}
-       　／　生理：●
-      </div>
+    const tableHtml=`
       <table>
         <thead>
           <tr>
@@ -1840,30 +1832,56 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
           </tr>
         </thead>
         <tbody>${bodyRows}</tbody>
-      </table>
-      <footer>勉強・生活時間・体調記録から作成</footer>
-    `;
+      </table>`;
 
-    report.setAttribute("aria-hidden","false");
-    healthMsgEl.textContent="印刷画面を開きます。iPhoneでは共有メニューから「ファイルに保存」でPDFとして保存できます。";
-
-    const oldTitle=document.title;
-    document.title="体調管理_"+year+"年"+String(month).padStart(2,"0")+"月";
-    void report.offsetHeight;
-
-    const cleanup=()=>{
-      document.title=oldTitle;
-      report.setAttribute("aria-hidden","true");
-      window.removeEventListener("afterprint",cleanup);
-    };
-    window.addEventListener("afterprint",cleanup);
-
-    try{
-      window.print();
-    }catch(e){
-      cleanup();
-      healthMsgEl.textContent="このブラウザでは印刷画面を開けませんでした。Safariで開いてもう一度PDF出力してください。";
+    const preview=document.getElementById("healthReportPreview");
+    const printReport=document.getElementById("printReport");
+    if(!preview||!printReport){
+      healthMsgEl.textContent="月次一覧を表示できませんでした。";
+      return;
     }
+
+    const summaryHtml=`
+      睡眠合計：${escapeHtml(fmtMin(totalSleep))}
+     　／　睡眠記録日の平均：${sleepDays?escapeHtml(fmtMin(avgSleep)):"未記録"}
+     　／　生理：●`;
+
+    preview.innerHTML=`
+      <div class="health-report-preview-title">体調管理　${year}年${month}月</div>
+      <div class="health-report-preview-summary">${summaryHtml}</div>
+      <div class="health-report-preview-scroll">${tableHtml}</div>
+      <div class="health-report-preview-actions">
+        <button class="secondary" id="printHealthReport" type="button">印刷・PDF保存</button>
+      </div>`;
+    preview.classList.remove("is-hidden");
+
+    printReport.innerHTML=`
+      <h1>体調管理　${year}年${month}月</h1>
+      <div class="print-summary">${summaryHtml}</div>
+      ${tableHtml}
+      <footer>勉強・生活時間・体調記録から作成</footer>`;
+
+    const printBtn=document.getElementById("printHealthReport");
+    if(printBtn){
+      printBtn.addEventListener("click",()=>{
+        const oldTitle=document.title;
+        document.title="体調管理_"+year+"年"+String(month).padStart(2,"0")+"月";
+        const cleanup=()=>{
+          document.title=oldTitle;
+          window.removeEventListener("afterprint",cleanup);
+        };
+        window.addEventListener("afterprint",cleanup);
+        try{
+          window.print();
+        }catch(e){
+          cleanup();
+          healthMsgEl.textContent="このブラウザでは印刷画面を開けませんでした。Safariで開いてください。";
+        }
+      });
+    }
+
+    healthMsgEl.textContent=year+"年"+month+"月の一覧を表示しました。";
+    preview.scrollIntoView({behavior:"smooth",block:"start"});
   }
 
   function femaleSingleValue(group){
