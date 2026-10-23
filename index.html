@@ -242,27 +242,25 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .life-field input,.life-field select{display:block;width:100%;max-width:100%;min-width:0;height:var(--control-h);min-height:var(--control-h);border:1px solid #d8dee8;border-radius:var(--control-radius);background:#fff;color:var(--text);font:inherit;padding:0 16px;box-shadow:none;outline:none}
 .life-msg{font-size:12px;color:var(--muted);min-height:18px;margin-top:4px}
 .sleep-total{margin-top:12px;width:100%;height:var(--control-h);min-height:var(--control-h);padding:0 16px;border:1px solid #d8dee8;border-radius:var(--control-radius);background:#eef5ff;font-size:14px;font-weight:750;display:flex;align-items:center;justify-content:center;text-align:center}
-.pie-wrap{display:flex;flex-direction:column;gap:16px;align-items:center;margin-top:14px;width:100%}
-.pie{width:180px;height:180px;border-radius:50%;background:#eef0f4;position:relative;box-shadow:inset 0 0 0 1px var(--line);flex:0 0 auto}
-.pie::after{content:attr(data-center);white-space:nowrap;position:absolute;inset:36px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;text-align:center;font-size:24px;line-height:1;font-weight:800;color:var(--text);box-shadow:0 0 0 1px var(--line);padding:8px;font-variant-numeric:tabular-nums}
+.pie-wrap{display:flex;flex-direction:column;gap:16px;align-items:center;margin-top:16px;width:100%}
+.day-clock{width:min(100%,360px);aspect-ratio:1/1;position:relative;flex:0 0 auto}
+.day-clock svg{display:block;width:100%;height:100%;overflow:visible}
+.clock-bg{fill:none;stroke:#eef0f4;stroke-width:58}
+.clock-arc{fill:none;stroke-width:58;stroke-linecap:butt}
+.clock-center{fill:#fff;stroke:var(--line);stroke-width:1}
+.clock-time{fill:var(--text);font-size:26px;font-weight:800;text-anchor:middle;dominant-baseline:middle;font-variant-numeric:tabular-nums}
+.clock-hour{fill:var(--muted);font-size:10px;font-weight:650;text-anchor:middle;dominant-baseline:middle}
+.clock-tick{stroke:#cfd4dd;stroke-width:1.5}
+.clock-tick.major{stroke:#aeb6c3;stroke-width:2}
+.clock-segment-label{fill:#fff;font-size:9px;font-weight:800;text-anchor:middle;dominant-baseline:middle;paint-order:stroke;stroke:rgba(0,0,0,.14);stroke-width:2px}
 .pie-legend{display:flex;flex-direction:column;gap:9px;min-width:0;width:100%}
 .pie-item{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:9px;align-items:center;font-size:13px;min-width:0;padding:2px 0}
 .pie-dot{width:10px;height:10px;border-radius:50%}
 .pie-time{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
-.timeline-title{font-size:14px;font-weight:750;margin:20px 0 8px}
-.timeline-scale{display:grid;grid-template-columns:repeat(5,1fr);font-size:9px;color:var(--muted);margin:0 0 5px 54px}
-.timeline-scale span:last-child{text-align:right}
-.timeline-row{display:grid;grid-template-columns:48px 1fr;gap:6px;align-items:center;margin:7px 0}
-.timeline-name{font-size:10px;font-weight:700;text-align:right}
-.timeline-track{height:22px;border-radius:7px;background:linear-gradient(to right,#f3f4f7 0,#f3f4f7 24.7%,#e7e9ee 25%,#f3f4f7 25.3%,#f3f4f7 49.7%,#e7e9ee 50%,#f3f4f7 50.3%,#f3f4f7 74.7%,#e7e9ee 75%,#f3f4f7 75.3%);position:relative;overflow:hidden;border:1px solid var(--line)}
-.timeline-bar{position:absolute;top:2px;bottom:2px;border-radius:5px;min-width:2px}
-.timeline-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:9px}
+.clock-note{width:100%;font-size:11px;color:var(--muted);line-height:1.55;text-align:left}
 @media(max-width:430px){
   .card{padding:16px}
-  .pie{width:164px;height:164px}
-  .pie::after{inset:33px;font-size:22px}
-  .timeline-row{grid-template-columns:42px minmax(0,1fr)}
-  .timeline-scale{margin-left:48px}
+  .day-clock{width:min(100%,330px)}
 }
 .manual-entry{width:100%;border:0;margin:0}
 .manual-entry summary{list-style:none;width:100%;height:var(--control-h);border:1px solid #d8dee8;border-radius:var(--control-radius);background:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer}
@@ -367,8 +365,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17</span></div>
-    <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。計測中は円グラフ・合計時間・タイムラインがリアルタイムで更新されます。</div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.1</span></div>
+    <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
       <div class="life-row one">
@@ -424,14 +422,10 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     <div class="sleep-total" id="sleepTotal">睡眠 合計：0分</div>
 
     <div class="pie-wrap">
-      <div class="pie" id="lifePie" aria-label="1日の時間配分"></div>
+      <div class="day-clock" id="lifePie" aria-label="24時間の生活時間"></div>
       <div class="pie-legend" id="lifeLegend"></div>
+      <div class="clock-note">円は0時から24時までの実際の時間帯です。過去の勉強で合計時間しか残っていない分は、合計には含まれますが円の時間帯には表示できません。</div>
     </div>
-
-    <div class="timeline-title">24時間タイムライン</div>
-    <div class="timeline-scale"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
-    <div id="lifeTimeline"></div>
-    <div class="timeline-note">過去の勉強時間は合計だけ残っている日があるため、過去分の「何時に勉強したか」は復元できません。これから計測した勉強は時間帯まで残します。</div>
   </div>
 
   <div class="card" id="healthCard">
@@ -596,7 +590,6 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const lifeMsgEl=document.getElementById("lifeMsg");
   const lifePieEl=document.getElementById("lifePie");
   const lifeLegendEl=document.getElementById("lifeLegend");
-  const lifeTimelineEl=document.getElementById("lifeTimeline");
   const lifeSessionEditorEl=document.getElementById("lifeSessionEditor");
   const sleepTotalEl=document.getElementById("sleepTotal");
   const liveActivityStatusEl=document.getElementById("liveActivityStatus");
@@ -1323,6 +1316,109 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return sec;
   }
 
+  function clockPoint(cx,cy,r,minute){
+    const angle=(minute/1440*360-90)*Math.PI/180;
+    return {x:cx+r*Math.cos(angle),y:cy+r*Math.sin(angle)};
+  }
+
+  function clockArcPath(cx,cy,r,startMinute,endMinute){
+    const span=Math.max(0,Math.min(1440,endMinute)-Math.max(0,startMinute));
+    if(span<=0) return "";
+    const start=Math.max(0,startMinute);
+    const end=Math.min(1440,endMinute);
+    const a=clockPoint(cx,cy,r,start);
+    const b=clockPoint(cx,cy,r,end);
+    const large=span>720?1:0;
+    return "M "+a.x.toFixed(2)+" "+a.y.toFixed(2)+
+      " A "+r+" "+r+" 0 "+large+" 1 "+b.x.toFixed(2)+" "+b.y.toFixed(2);
+  }
+
+  function clockSegmentsForDate(data,date){
+    const parts=date.split("-").map(Number);
+    const dayStart=new Date(parts[0],parts[1]-1,parts[2]).getTime();
+    const dayEnd=new Date(parts[0],parts[1]-1,parts[2]+1).getTime();
+    const segments=[];
+
+    (data.activitySessions||[]).forEach(x=>{
+      if(!x||x.date!==date||!ACTIVITY_META[x.category]) return;
+      const a=Math.max(dayStart,Number(x.start||0));
+      const b=Math.min(dayEnd,Number(x.end||0));
+      if(b<=a) return;
+      segments.push({
+        category:x.category,
+        start:(a-dayStart)/60000,
+        end:(b-dayStart)/60000
+      });
+    });
+
+    if(data.running&&data.runningDate===date&&data.startedAt){
+      const a=Math.max(dayStart,Number(data.startedAt));
+      const b=Math.min(dayEnd,Date.now());
+      if(b>a){
+        segments.push({category:"study",start:(a-dayStart)/60000,end:(b-dayStart)/60000});
+      }
+    }
+
+    if(data.activityRunning&&data.activityRunning.startedAt&&date===dateKey()){
+      const a=Math.max(dayStart,Number(data.activityRunning.startedAt));
+      const b=Math.min(dayEnd,Date.now());
+      if(b>a){
+        segments.push({
+          category:data.activityRunning.category,
+          start:(a-dayStart)/60000,
+          end:(b-dayStart)/60000
+        });
+      }
+    }
+
+    return segments.sort((a,b)=>a.start-b.start);
+  }
+
+  function renderDayClock(data,date){
+    if(!lifePieEl) return;
+    const cx=160,cy=160,r=102;
+    const segments=clockSegmentsForDate(data,date);
+    const svg=[];
+
+    svg.push('<svg viewBox="0 0 320 320" role="img" aria-label="0時から24時までの生活時間">');
+    svg.push('<circle class="clock-bg" cx="'+cx+'" cy="'+cy+'" r="'+r+'"></circle>');
+
+    segments.forEach(seg=>{
+      const path=clockArcPath(cx,cy,r,seg.start,seg.end);
+      if(!path) return;
+      const color=ACTIVITY_META[seg.category].color;
+      svg.push('<path class="clock-arc" d="'+path+'" stroke="'+color+'"></path>');
+    });
+
+    for(let h=0;h<24;h++){
+      const minute=h*60;
+      const major=h%3===0;
+      const inner=clockPoint(cx,cy,r+31,minute);
+      const outer=clockPoint(cx,cy,r+(major?40:36),minute);
+      const label=clockPoint(cx,cy,r+51,minute);
+      svg.push('<line class="clock-tick'+(major?' major':'')+'" x1="'+inner.x.toFixed(2)+'" y1="'+inner.y.toFixed(2)+'" x2="'+outer.x.toFixed(2)+'" y2="'+outer.y.toFixed(2)+'"></line>');
+      svg.push('<text class="clock-hour" x="'+label.x.toFixed(2)+'" y="'+label.y.toFixed(2)+'">'+h+'</text>');
+    }
+
+    segments.forEach(seg=>{
+      const duration=seg.end-seg.start;
+      if(duration<60) return;
+      const mid=(seg.start+seg.end)/2;
+      const p=clockPoint(cx,cy,r,mid);
+      const label=ACTIVITY_META[seg.category].label;
+      svg.push('<text class="clock-segment-label" x="'+p.x.toFixed(2)+'" y="'+p.y.toFixed(2)+'">'+label+'</text>');
+    });
+
+    svg.push('<circle class="clock-center" cx="'+cx+'" cy="'+cy+'" r="66"></circle>');
+    const now=new Date();
+    const hh=String(now.getHours()).padStart(2,"0");
+    const mm=String(now.getMinutes()).padStart(2,"0");
+    svg.push('<text class="clock-time" x="'+cx+'" y="'+cy+'">'+hh+':'+mm+'</text>');
+    svg.push('</svg>');
+
+    lifePieEl.innerHTML=svg.join("");
+  }
+
   function renderLife(data){
     const date=selectedLifeDate();
     const vals={
@@ -1350,22 +1446,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     liveActivityStatusEl.textContent=activeElapsed>0
       ? "現在："+activeLabel+" "+fmtClock(activeElapsed)
       : "現在：未計測";
-    const nowClock=new Date();
-    const hh=String(nowClock.getHours()).padStart(2,"0");
-    const mm=String(nowClock.getMinutes()).padStart(2,"0");
-    lifePieEl.setAttribute("data-center",hh+":"+mm);
-
     const order=["study","sleep","meal","break","outing","other","untracked"];
-    const totalForPie=order.reduce((sum,k)=>sum+vals[k],0)||86400;
-    let acc=0;
-    const stops=[];
-    order.forEach(k=>{
-      const startPct=acc/totalForPie*100;
-      acc+=vals[k];
-      const endPct=acc/totalForPie*100;
-      stops.push(ACTIVITY_META[k].color+" "+startPct+"% "+endPct+"%");
-    });
-    lifePieEl.style.background="conic-gradient("+stops.join(",")+")";
+    renderDayClock(data,date);
 
     lifeLegendEl.innerHTML="";
     order.forEach(k=>{
@@ -1381,62 +1463,6 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       time.textContent=fmtMin(vals[k]);
       row.append(dot,name,time);
       lifeLegendEl.appendChild(row);
-    });
-
-    lifeTimelineEl.innerHTML="";
-    ["study","sleep","meal","break","outing","other"].forEach(category=>{
-      const row=document.createElement("div");
-      row.className="timeline-row";
-      const name=document.createElement("div");
-      name.className="timeline-name";
-      name.textContent=ACTIVITY_META[category].label;
-      const track=document.createElement("div");
-      track.className="timeline-track";
-
-      const dateParts=date.split("-").map(Number);
-      const dayStart=new Date(dateParts[0],dateParts[1]-1,dateParts[2]).getTime();
-      const dayEnd=dayStart+86400000;
-
-      (data.activitySessions||[]).forEach(x=>{
-        if(x.date!==date||x.category!==category) return;
-        const a=Math.max(dayStart,Number(x.start||0));
-        const b=Math.min(dayEnd,Number(x.end||0));
-        if(b<=a) return;
-        const bar=document.createElement("div");
-        bar.className="timeline-bar";
-        bar.style.left=((a-dayStart)/864000)+"%";
-        bar.style.width=((b-a)/864000)+"%";
-        bar.style.background=ACTIVITY_META[category].color;
-        track.appendChild(bar);
-      });
-
-      if(category==="study"&&data.running&&data.runningDate===date&&data.startedAt){
-        const a=Math.max(dayStart,Number(data.startedAt));
-        const b=Math.min(dayEnd,Date.now());
-        if(b>a){
-          const bar=document.createElement("div");
-          bar.className="timeline-bar";
-          bar.style.left=((a-dayStart)/864000)+"%";
-          bar.style.width=((b-a)/864000)+"%";
-          bar.style.background=ACTIVITY_META.study.color;
-          track.appendChild(bar);
-        }
-      }
-      if(data.activityRunning&&data.activityRunning.category===category&&date===dateKey()){
-        const a=Math.max(dayStart,Number(data.activityRunning.startedAt));
-        const b=Math.min(dayEnd,Date.now());
-        if(b>a){
-          const bar=document.createElement("div");
-          bar.className="timeline-bar";
-          bar.style.left=((a-dayStart)/864000)+"%";
-          bar.style.width=((b-a)/864000)+"%";
-          bar.style.background=ACTIVITY_META[category].color;
-          track.appendChild(bar);
-        }
-      }
-
-      row.append(name,track);
-      lifeTimelineEl.appendChild(row);
     });
 
     if(data.activityRunning&&data.activityRunning.startedAt){
