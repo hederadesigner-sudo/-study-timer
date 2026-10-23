@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="勉強タイマー">
-<meta name="app-build" content="2026-10-24-root-live-v17-37">
+<meta name="app-build" content="2026-10-24-root-live-v17-38">
 <title>勉強タイマー</title>
 <script>
 window.addEventListener("pageshow",function(e){
@@ -83,16 +83,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .study-month-history{display:flex;flex-direction:column;gap:7px}
 .study-growth-summary{padding:16px;border-radius:16px;background:linear-gradient(135deg,#eeecff,#f8f9ff);margin-bottom:14px}
 .study-growth-kicker{font-size:12px;font-weight:800;color:#6259a7}
-.study-growth-number{font-size:27px;font-weight:850;margin-top:4px}
-.study-growth-subtitle{font-size:12px;color:#596477;margin-top:5px;line-height:1.5}
-.study-month-chart-title{font-weight:800;font-size:12px;margin:10px 0}
-.study-month-chart{display:flex;gap:7px;align-items:end;height:160px;border-bottom:1px solid #e2e6ec;margin-bottom:18px}
-.study-month-chart-item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%}
-.study-month-chart-value,.study-month-chart-label{font-size:10px;font-weight:750;color:#717b8d;white-space:nowrap}
-.study-month-chart-bar{width:100%;max-width:48px;background:#b8b3f8;border-radius:8px 8px 2px 2px;min-height:3px}
-.study-month-chart-bar.is-latest{background:var(--accent)}
-.study-month-record-gap{grid-column:1/-1;font-size:11px;color:var(--muted)}
-
+.study-growth-number{font-size:27px;font-weight:850;margin-top:4px;font-variant-numeric:tabular-nums}
+.study-growth-subtitle{font-size:12px;color:#596477;margin-top:5px;line-height:1.6}
+.study-month-record-gap{grid-column:1/-1;font-size:11px;color:var(--muted);line-height:1.5}
 .study-month-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;border-bottom:1px solid #eceff3;padding:9px 2px}
 .study-month-row:last-child{border-bottom:0}
 .study-month-label{font-size:13px;font-weight:750}
@@ -566,7 +559,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.37</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.38</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -1801,10 +1794,10 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const months=new Set();
 
     Object.keys(data.days||{}).forEach(k=>{
-      if(/^\d{4}-\d{2}-\d{2}$/.test(k)) months.add(k.slice(0,7));
+      if(/^\\d{4}-\\d{2}-\\d{2}$/.test(k)) months.add(k.slice(0,7));
     });
     Object.keys(data.weekMinimums||{}).forEach(k=>{
-      if(/^\d{4}-\d{2}-\d{2}$/.test(k)) months.add(k.slice(0,7));
+      if(/^\\d{4}-\\d{2}-\\d{2}$/.test(k)) months.add(k.slice(0,7));
     });
     if(data.runningDate) months.add(data.runningDate.slice(0,7));
 
@@ -1819,115 +1812,57 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       return;
     }
 
-    const byMonth=new Map(rows.map(x=>[x.ym,x]));
-    const bestTotal=Math.max(...rows.map(x=>x.total));
-
-
+    // 24時間を分母にせず、生活と休養を確保した「1日2時間」を比較用の目安にする。
+    // この目安は評価やノルマではなく、達成してもそれ以上でも前向きに表示する。
+    const dailyReferenceSeconds=2*60*60;
+    const referenceForMonth=item=>new Date(item.year,item.month,0).getDate()*dailyReferenceSeconds;
     const latest=rows[0];
-    const lastMonth=byMonth.get(previousMonthKey(latest.year,latest.month));
+    const latestReference=referenceForMonth(latest);
+    const latestPercent=latestReference>0?latest.total/latestReference*100:0;
     const summary=document.createElement("div");
     summary.className="study-growth-summary";
     const kicker=document.createElement("div");
     kicker.className="study-growth-kicker";
-    kicker.textContent="積み重ねた勉強時間";
+    kicker.textContent="自分のペースで積み重ねた時間";
     const big=document.createElement("div");
     big.className="study-growth-number";
     big.textContent=fmtMin(latest.total);
     const sub=document.createElement("div");
     sub.className="study-growth-subtitle";
-    if(lastMonth&&lastMonth.total>0){
-      const change=latest.total-lastMonth.total;
-      const rate=change/lastMonth.total*100;
-      sub.textContent=change>0?"先月より ＋"+fmtMin(change)+"（＋"+rate.toFixed(1)+"%）成長！":
-        change<0?"先月との差 "+fmtMin(Math.abs(change))+"。自分のペースで続けよう":
-        "先月と同じペースで積み重ねています";
-    }else{
-      sub.textContent="ここから自分の成長記録が始まります";
-    }
+    sub.textContent="1日2時間を目安にすると、今月の目安 "+fmtMin(latestReference)+"の "+latestPercent.toFixed(1)+"% 分を積み重ねました。睡眠・休養・生活を優先してOK。目安はノルマではありません。";
     summary.append(kicker,big,sub);
     studyMonthHistoryEl.appendChild(summary);
 
-    const chartTitle=document.createElement("div");
-    chartTitle.className="study-month-chart-title";
-    chartTitle.textContent="月ごとの成長（直近6か月）";
-    studyMonthHistoryEl.appendChild(chartTitle);
-    const chart=document.createElement("div");
-    chart.className="study-month-chart";
-    rows.slice(0,6).reverse().forEach(item=>{
-      const col=document.createElement("div");
-      col.className="study-month-chart-item";
-      const value=document.createElement("span");
-      value.className="study-month-chart-value";
-      value.textContent=(item.total/3600).toFixed(1)+"h";
-      const bar=document.createElement("div");
-      bar.className="study-month-chart-bar";
-      if(item.ym===latest.ym)bar.classList.add("is-latest");
-      bar.style.height=Math.max(3,Math.round(item.total/bestTotal*104))+"px";
-      const label=document.createElement("span");
-      label.className="study-month-chart-label";
-      label.textContent=item.month+"月";
-      col.append(value,bar,label);
-      chart.appendChild(col);
-    });
-    studyMonthHistoryEl.appendChild(chart);
-
     rows.forEach(item=>{
+      const reference=referenceForMonth(item);
+      const percent=reference>0?item.total/reference*100:0;
       const row=document.createElement("div");
       row.className="study-month-row";
-
       const label=document.createElement("span");
       label.className="study-month-label";
       label.textContent=item.year+"年"+item.month+"月";
-
       const total=document.createElement("span");
       total.className="study-month-total";
       total.textContent=fmtMin(item.total);
-
       row.append(label,total);
-
-      const growth=document.createElement("div");
-      growth.className="study-month-growth";
-
-      const growthText=document.createElement("span");
-      growthText.className="study-month-growth-text";
-
-      const prev=byMonth.get(previousMonthKey(item.year,item.month));
-      if(prev&&prev.total>0){
-        const diff=item.total-prev.total;
-        const pct=diff/prev.total*100;
-        if(diff>0){
-          growthText.classList.add("is-up");
-          growthText.textContent="先月より ＋"+fmtMin(diff)+"（＋"+pct.toFixed(1)+"%）";
-        }else if(diff<0){
-          growthText.classList.add("is-down");
-          growthText.textContent="先月より −"+fmtMin(Math.abs(diff))+"（"+pct.toFixed(1)+"%）";
-        }else{
-          growthText.textContent="先月と同じ";
-        }
-      }else{
-        growthText.textContent="この月から記録";
-      }
-      growth.appendChild(growthText);
-
-      if(item.total===bestTotal){
-        const best=document.createElement("span");
-        best.className="study-month-best";
-        best.textContent="自己ベスト";
-        growth.appendChild(best);
-      }
-      row.appendChild(growth);
 
       const progress=document.createElement("div");
       progress.className="study-month-progress";
-      const progressFill=document.createElement("div");
-      progressFill.className="study-month-progress-fill";
-      progressFill.style.width=(bestTotal>0?Math.max(2,Math.min(100,item.total/bestTotal*100)):0)+"%";
-      progress.appendChild(progressFill);
+      progress.setAttribute("role","progressbar");
+      progress.setAttribute("aria-label",item.year+"年"+item.month+"月の勉強時間の目安に対する割合");
+      progress.setAttribute("aria-valuemin","0");
+      progress.setAttribute("aria-valuemax","100");
+      progress.setAttribute("aria-valuenow",String(Math.round(Math.min(100,percent))));
+      const fill=document.createElement("div");
+      fill.className="study-month-progress-fill";
+      fill.style.width=Math.min(100,Math.max(0,percent))+"%";
+      progress.appendChild(fill);
       row.appendChild(progress);
-      const gap=document.createElement("div");
-      gap.className="study-month-record-gap";
-      gap.textContent=item.total===bestTotal?"これまでの最高記録！":"最高記録まであと "+fmtMin(bestTotal-item.total);
-      row.appendChild(gap);
+
+      const detail=document.createElement("div");
+      detail.className="study-month-record-gap";
+      detail.textContent="生活と休養を確保した目安 "+fmtMin(reference)+" に対して "+percent.toFixed(1)+"% 分の勉強を記録";
+      row.appendChild(detail);
       studyMonthHistoryEl.appendChild(row);
     });
   }
