@@ -249,6 +249,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .clock-arc{fill:none;stroke-width:58;stroke-linecap:butt}
 .clock-center{fill:#fff;stroke:var(--line);stroke-width:1}
 .clock-time{fill:var(--text);font-size:26px;font-weight:800;text-anchor:middle;dominant-baseline:middle;font-variant-numeric:tabular-nums}
+.clock-date{fill:var(--text);font-size:14px;font-weight:800;text-anchor:middle}
+.clock-date-sub{fill:var(--muted);font-size:11px;font-weight:700;text-anchor:middle}
 .clock-hour{fill:var(--muted);font-size:10px;font-weight:650;text-anchor:middle;dominant-baseline:middle}
 .clock-tick{stroke:#cfd4dd;stroke-width:1.5}
 .clock-tick.major{stroke:#aeb6c3;stroke-width:2}
@@ -365,7 +367,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.1</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.2</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -1374,6 +1376,14 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return segments.sort((a,b)=>a.start-b.start);
   }
 
+  function activityDateLabel(date){
+    const p=String(date||"").split("-").map(Number);
+    if(p.length!==3||!p[0]||!p[1]||!p[2]) return "";
+    const d=new Date(p[0],p[1]-1,p[2]);
+    const weekdays=["日","月","火","水","木","金","土"];
+    return p[1]+"月"+p[2]+"日（"+weekdays[d.getDay()]+"）";
+  }
+
   function renderDayClock(data,date){
     if(!lifePieEl) return;
     const cx=160,cy=160,r=102;
@@ -1410,10 +1420,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     });
 
     svg.push('<circle class="clock-center" cx="'+cx+'" cy="'+cy+'" r="66"></circle>');
-    const now=new Date();
-    const hh=String(now.getHours()).padStart(2,"0");
-    const mm=String(now.getMinutes()).padStart(2,"0");
-    svg.push('<text class="clock-time" x="'+cx+'" y="'+cy+'">'+hh+':'+mm+'</text>');
+    if(date===dateKey()){
+      const now=new Date();
+      const hh=String(now.getHours()).padStart(2,"0");
+      const mm=String(now.getMinutes()).padStart(2,"0");
+      svg.push('<text class="clock-time" x="'+cx+'" y="'+cy+'">'+hh+':'+mm+'</text>');
+    }else{
+      const label=activityDateLabel(date);
+      svg.push('<text class="clock-date" x="'+cx+'" y="'+(cy-4)+'">'+label+'</text>');
+      svg.push('<text class="clock-date-sub" x="'+cx+'" y="'+(cy+18)+'">の活動</text>');
+    }
     svg.push('</svg>');
 
     lifePieEl.innerHTML=svg.join("");
@@ -1434,18 +1450,22 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     sleepTotalEl.textContent="睡眠 合計："+fmtMin(vals.sleep);
     renderLifeSessionEditor(data,date);
 
-    let activeLabel="未計測";
-    let activeElapsed=0;
-    if(data.running&&data.startedAt){
-      activeLabel="勉強";
-      activeElapsed=currentLiveSeconds(data);
-    }else if(data.activityRunning&&data.activityRunning.startedAt){
-      activeLabel=ACTIVITY_META[data.activityRunning.category].label;
-      activeElapsed=Math.max(0,(Date.now()-Number(data.activityRunning.startedAt))/1000);
+    if(date===dateKey()){
+      let activeLabel="未計測";
+      let activeElapsed=0;
+      if(data.running&&data.startedAt){
+        activeLabel="勉強";
+        activeElapsed=currentLiveSeconds(data);
+      }else if(data.activityRunning&&data.activityRunning.startedAt){
+        activeLabel=ACTIVITY_META[data.activityRunning.category].label;
+        activeElapsed=Math.max(0,(Date.now()-Number(data.activityRunning.startedAt))/1000);
+      }
+      liveActivityStatusEl.textContent=activeElapsed>0
+        ? "現在："+activeLabel+" "+fmtClock(activeElapsed)
+        : "現在：未計測";
+    }else{
+      liveActivityStatusEl.textContent=activityDateLabel(date)+"の活動";
     }
-    liveActivityStatusEl.textContent=activeElapsed>0
-      ? "現在："+activeLabel+" "+fmtClock(activeElapsed)
-      : "現在：未計測";
     const order=["study","sleep","meal","break","outing","other","untracked"];
     renderDayClock(data,date);
 
