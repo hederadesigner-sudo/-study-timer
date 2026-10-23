@@ -432,7 +432,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.18</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.19</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -1750,7 +1750,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const monthValue=selectedHealthReportMonth();
     const url=new URL("report.html",window.location.href);
     url.searchParams.set("month",monthValue);
-    url.searchParams.set("v","17.18");
+    url.searchParams.set("v","17.19");
     const opened=window.open(url.toString(),"_blank");
     if(!opened){
       window.location.href=url.toString();
@@ -1841,7 +1841,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         "position:fixed",
         "left:-10000px",
         "top:0",
-        "width:1120px",
+        "width:900px",
         "background:#fff",
         "color:#172033",
         "padding:42px",
@@ -1852,10 +1852,10 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
       renderRoot.innerHTML=`
         <style>
-          .pdf-title{font-size:24px;font-weight:800;margin:0 0 8px}
-          .pdf-summary{font-size:12px;color:#5f6878;margin-bottom:12px;line-height:1.4}
-          .pdf-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}
-          .pdf-table th,.pdf-table td{border:1px solid #cfd5df;padding:5px 5px;vertical-align:top;word-break:break-word}
+          .pdf-title{font-size:20px;font-weight:800;margin:0 0 4px}
+          .pdf-summary{font-size:10px;color:#5f6878;margin-bottom:7px;line-height:1.2}
+          .pdf-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}
+          .pdf-table th,.pdf-table td{border:1px solid #cfd5df;padding:3px 4px;line-height:1.12;vertical-align:top;word-break:break-word}
           .pdf-table th{background:#f2f4f7;font-weight:800}
           .pdf-table th:nth-child(1),.pdf-table td:nth-child(1){width:8%}
           .pdf-table th:nth-child(2),.pdf-table td:nth-child(2){width:14%}
@@ -1863,7 +1863,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
           .pdf-table th:nth-child(4),.pdf-table td:nth-child(4){width:8%;text-align:center}
           .pdf-table th:nth-child(5),.pdf-table td:nth-child(5){width:33%}
           .pdf-table th:nth-child(6),.pdf-table td:nth-child(6){width:20%}
-          .female,.memo{white-space:pre-wrap;word-break:break-word;line-height:1.45}
+          .female,.memo{white-space:pre-wrap;word-break:break-word;line-height:1.12}
           .pdf-footer{margin-top:12px;font-size:10px;color:#7a8391}
         </style>
         <div class="pdf-title">体調管理　${year}年${month}月</div>
