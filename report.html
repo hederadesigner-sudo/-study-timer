@@ -259,8 +259,8 @@ th:nth-child(6),td:nth-child(6){width:23%}
     try{
       const canvas=await html2canvas(root,{scale:1.5,backgroundColor:"#ffffff",logging:false,useCORS:true});
       const {jsPDF}=window.jspdf;
-      const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4",compress:true});
-      const margin=8,pageWidth=210,pageHeight=297;
+      const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4",compress:true});
+      const margin=8,pageWidth=297,pageHeight=210;
       const contentWidth=pageWidth-margin*2,contentHeight=pageHeight-margin*2;
       const pxPerMm=canvas.width/contentWidth;
       const pagePx=Math.max(1,Math.floor(contentHeight*pxPerMm));
