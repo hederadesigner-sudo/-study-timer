@@ -150,6 +150,33 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .checkline{display:flex;align-items:center;gap:10px;width:100%;height:var(--control-h);min-height:var(--control-h);padding:0 16px;border:1px solid #d8dee8;border-radius:var(--control-radius);white-space:nowrap;background:#fff;box-shadow:none}
 .checkline input{width:22px;height:22px;min-height:0;flex:0 0 22px;margin:0;padding:0}
 .health-summary{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:13px;line-height:1.55}
+.female-health{width:100%;border:1px solid #d8dee8;border-radius:var(--control-radius);background:#fff;overflow:hidden}
+.female-health summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:var(--control-h);padding:0 16px;font-size:14px;font-weight:800;cursor:pointer}
+.female-health summary::-webkit-details-marker{display:none}
+.female-health summary::after{content:"›";font-size:22px;color:var(--muted);transition:transform .18s}
+.female-health[open] summary::after{transform:rotate(90deg)}
+.female-health-summary-note{font-size:11px;font-weight:650;color:var(--muted);margin-left:auto}
+.female-health-body{display:flex;flex-direction:column;gap:12px;padding:0 12px 12px}
+.female-health-card{border-radius:16px;background:#f8fafc;padding:14px}
+.female-health-section-title{font-size:16px;font-weight:850;margin-bottom:14px}
+.female-health-label{font-size:12px;font-weight:800;color:var(--text);margin:12px 0 7px}
+.female-chip-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.female-chip-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.female-chip-grid.five{grid-template-columns:repeat(5,minmax(0,1fr))}
+.female-chip{min-width:0;min-height:44px;border:1px solid #e0e4ea;border-radius:12px;background:#fff;color:var(--text);padding:8px 6px;font-size:12px;font-weight:750;line-height:1.25}
+.female-chip.is-selected{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.color-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:7px 3px;font-size:10px}
+.color-dot{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.07);display:block}
+.color-dot.clear{background:#bfe9f4}
+.color-dot.white{background:#f4f1ea}
+.color-dot.yellow{background:#ffd67d}
+.color-dot.pink{background:#f4b7b2}
+.color-dot.brown{background:#c77f58}
+@media(max-width:430px){
+  .female-chip-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .female-chip-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .female-chip-grid.five{grid-template-columns:repeat(5,minmax(0,1fr))}
+}
 .health-save-state{margin-top:12px;padding:10px 12px;border-radius:12px;font-size:13px;font-weight:700;text-align:center;border:1px solid #d8dee8}
 .health-save-state.is-new{background:#f6f7f9;color:var(--muted)}
 .health-save-state.is-saved{background:#eef8f0;color:#277a3d;border-color:#cde8d3}
@@ -368,7 +395,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.4</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.5</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -472,14 +499,67 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         <button class="secondary period-delete-btn" id="deletePeriod" type="button">この生理記録を削除</button>
       </div>
 
+      <details class="female-health" id="femaleHealthDetails">
+        <summary>
+          <span>女性の体調記録</span>
+          <span class="female-health-summary-note">タップして開く</span>
+        </summary>
+        <div class="female-health-body">
+
+          <section class="female-health-card">
+            <div class="female-health-section-title">おりもの</div>
+
+            <div class="female-health-label">量</div>
+            <div class="female-chip-grid four" data-single-group="dischargeAmount">
+              <button type="button" class="female-chip" data-value="none">なし</button>
+              <button type="button" class="female-chip" data-value="little">少ない</button>
+              <button type="button" class="female-chip" data-value="normal">ふつう</button>
+              <button type="button" class="female-chip" data-value="much">多い</button>
+            </div>
+
+            <div class="female-health-label">状態</div>
+            <div class="female-chip-grid" data-single-group="dischargeState">
+              <button type="button" class="female-chip" data-value="sticky">ねばねば</button>
+              <button type="button" class="female-chip" data-value="creamy">クリーム状</button>
+              <button type="button" class="female-chip" data-value="thick">とろみ</button>
+              <button type="button" class="female-chip" data-value="watery">水っぽい</button>
+              <button type="button" class="female-chip" data-value="crumbly">ぽろぽろ</button>
+            </div>
+
+            <div class="female-health-label">色</div>
+            <div class="female-chip-grid five color-chips" data-single-group="dischargeColor">
+              <button type="button" class="female-chip color-chip" data-value="clear"><span class="color-dot clear"></span>透明</button>
+              <button type="button" class="female-chip color-chip" data-value="white"><span class="color-dot white"></span>白</button>
+              <button type="button" class="female-chip color-chip" data-value="yellow"><span class="color-dot yellow"></span>黄色</button>
+              <button type="button" class="female-chip color-chip" data-value="pink"><span class="color-dot pink"></span>ピンク</button>
+              <button type="button" class="female-chip color-chip" data-value="brown"><span class="color-dot brown"></span>茶色</button>
+            </div>
+          </section>
+
+          <section class="female-health-card">
+            <div class="female-health-section-title">デリケートゾーン</div>
+            <div class="female-health-label">気になる症状</div>
+            <div class="female-chip-grid" data-multi-group="delicateSymptoms">
+              <button type="button" class="female-chip" data-value="dryness">乾燥</button>
+              <button type="button" class="female-chip" data-value="humid">ムレ</button>
+              <button type="button" class="female-chip" data-value="itch">かゆみ</button>
+              <button type="button" class="female-chip" data-value="odor">におい</button>
+              <button type="button" class="female-chip" data-value="pain">痛み</button>
+              <button type="button" class="female-chip" data-value="irritation">ヒリヒリ</button>
+            </div>
+          </section>
+
+        </div>
+      </details>
+
       <div class="field full">
         <label for="healthMemo">体調メモ</label>
         <textarea id="healthMemo" placeholder="頭痛、だるさ、気分など"></textarea>
       </div>
     </div>
 
-    <div class="health-save-state is-new" id="healthSaveState">この日はまだ体調・メモを保存していません</div>
-    <button class="primary" id="saveHealth" type="button" style="margin-top:10px">体調・メモを新規保存</button>
+    <div class="health-save-state is-new" id="healthSaveState">この日はまだ体調記録を保存していません</div>
+    <button class="primary" id="saveHealth" type="button" style="margin-top:10px">体調記録を新規保存</button>
     <div class="health-msg" id="healthMsg"></div>
 
     <div class="health-report">
@@ -1642,6 +1722,48 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
     healthMsgEl.textContent="PDF出力画面を開きました。印刷画面からPDFとして保存できます。";
   }
 
+  function femaleSingleValue(group){
+    const selected=document.querySelector('[data-single-group="'+group+'"] .female-chip.is-selected');
+    return selected?selected.dataset.value:"";
+  }
+
+  function femaleMultiValues(group){
+    return [...document.querySelectorAll('[data-multi-group="'+group+'"] .female-chip.is-selected')]
+      .map(el=>el.dataset.value);
+  }
+
+  function setFemaleSingleValue(group,value){
+    document.querySelectorAll('[data-single-group="'+group+'"] .female-chip').forEach(btn=>{
+      btn.classList.toggle("is-selected",!!value&&btn.dataset.value===value);
+      btn.setAttribute("aria-pressed",btn.classList.contains("is-selected")?"true":"false");
+    });
+  }
+
+  function setFemaleMultiValues(group,values){
+    const selected=new Set(Array.isArray(values)?values:[]);
+    document.querySelectorAll('[data-multi-group="'+group+'"] .female-chip').forEach(btn=>{
+      btn.classList.toggle("is-selected",selected.has(btn.dataset.value));
+      btn.setAttribute("aria-pressed",btn.classList.contains("is-selected")?"true":"false");
+    });
+  }
+
+  function loadFemaleHealth(h){
+    const f=(h&&h.femaleHealth&&typeof h.femaleHealth==="object")?h.femaleHealth:{};
+    setFemaleSingleValue("dischargeAmount",f.dischargeAmount||"");
+    setFemaleSingleValue("dischargeState",f.dischargeState||"");
+    setFemaleSingleValue("dischargeColor",f.dischargeColor||"");
+    setFemaleMultiValues("delicateSymptoms",f.delicateSymptoms||[]);
+  }
+
+  function currentFemaleHealth(){
+    return {
+      dischargeAmount:femaleSingleValue("dischargeAmount"),
+      dischargeState:femaleSingleValue("dischargeState"),
+      dischargeColor:femaleSingleValue("dischargeColor"),
+      delicateSymptoms:femaleMultiValues("delicateSymptoms")
+    };
+  }
+
   function hasSavedHealthRecord(data,date){
     return !!(data&&data.health&&Object.prototype.hasOwnProperty.call(data.health,date));
   }
@@ -1661,15 +1783,15 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
         :"入力中です。まだ保存していません";
       saveHealthBtn.textContent=exists
         ?"変更内容を更新"
-        :"体調・メモを新規保存";
+        :"体調記録を新規保存";
     }else if(exists){
       healthSaveStateEl.classList.add("is-saved");
       healthSaveStateEl.textContent="保存済みです。変更した場合は更新してください";
-      saveHealthBtn.textContent="体調・メモを更新";
+      saveHealthBtn.textContent="体調記録を更新";
     }else{
       healthSaveStateEl.classList.add("is-new");
-      healthSaveStateEl.textContent="この日はまだ体調・メモを保存していません";
-      saveHealthBtn.textContent="体調・メモを新規保存";
+      healthSaveStateEl.textContent="この日はまだ体調記録を保存していません";
+      saveHealthBtn.textContent="体調記録を新規保存";
     }
   }
 
@@ -1683,6 +1805,7 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
     }
     conditionEl.value=h.condition?String(h.condition):"";
     healthMemoEl.value=h.memo||"";
+    loadFemaleHealth(h);
     const range=periodRangeForDate(data,date);
     if(range&&!range.open){
       periodStartEl.value=range.start;
@@ -1703,9 +1826,12 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
     const data=load();
     const existed=hasSavedHealthRecord(data,date);
     data.health=data.health||{};
+    const previous=(data.health[date]&&typeof data.health[date]==="object")?data.health[date]:{};
     data.health[date]={
+      ...previous,
       condition:conditionEl.value?Number(conditionEl.value):null,
-      memo:(healthMemoEl.value||"").trim()
+      memo:(healthMemoEl.value||"").trim(),
+      femaleHealth:currentFemaleHealth()
     };
     save(data);
     const now=new Date();
@@ -2201,6 +2327,32 @@ window.addEventListener("load",()=>{setTimeout(()=>window.print(),250)});
   });
   lifeToggleBtn.addEventListener("click",toggleLifeActivity);
   addLifeManualBtn.addEventListener("click",addManualLife);
+
+  document.querySelectorAll("[data-single-group] .female-chip").forEach(btn=>{
+    btn.setAttribute("aria-pressed","false");
+    btn.addEventListener("click",()=>{
+      const group=btn.closest("[data-single-group]");
+      const wasSelected=btn.classList.contains("is-selected");
+      group.querySelectorAll(".female-chip").forEach(x=>{
+        x.classList.remove("is-selected");
+        x.setAttribute("aria-pressed","false");
+      });
+      if(!wasSelected){
+        btn.classList.add("is-selected");
+        btn.setAttribute("aria-pressed","true");
+      }
+      updateHealthSaveState(true);
+    });
+  });
+
+  document.querySelectorAll("[data-multi-group] .female-chip").forEach(btn=>{
+    btn.setAttribute("aria-pressed","false");
+    btn.addEventListener("click",()=>{
+      btn.classList.toggle("is-selected");
+      btn.setAttribute("aria-pressed",btn.classList.contains("is-selected")?"true":"false");
+      updateHealthSaveState(true);
+    });
+  });
 
   healthDateEl.addEventListener("change",()=>{
     const k=healthDateEl.value||dateKey();
