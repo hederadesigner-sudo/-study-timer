@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="勉強タイマー">
-<meta name="app-build" content="2026-10-24-root-live-v17-41">
+<meta name="app-build" content="2026-10-24-root-live-v17-42">
 <title>勉強タイマー</title>
 <script>
 window.addEventListener("pageshow",function(e){
@@ -572,7 +572,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.41</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.42</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -1826,6 +1826,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const goals=data.studyMonthlyGoals&&typeof data.studyMonthlyGoals==="object"?data.studyMonthlyGoals:{};
     const overallGoal=Number(data.studyOverallGoalHours)||0;
     const cumulative=rows.reduce((sum,item)=>sum+Math.max(0,item.total),0);
+    const maxMonth=Math.max(1,...rows.map(item=>item.total));
 
     function goalEditor(label,hours,onSave){
       const wrapper=document.createElement("div");
@@ -1894,6 +1895,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     summary.appendChild(goalEditor("累計目標を設定",overallGoal,value=>saveGoals(fresh=>{fresh.studyOverallGoalHours=value;})));
     if(goalsPanel)goalsPanel.appendChild(summary);
 
+    // 過去月の入力欄は表示しない。目標設定は現在の月だけ。
+    if(goalsPanel){
+      const currentGoal=Number(goals[currentYm])||0;
+      const editor=goalEditor("今月（"+(now.getMonth()+1)+"月）の目標",currentGoal,value=>saveGoals(fresh=>{
+        if(value>0)fresh.studyMonthlyGoals[currentYm]=value;
+        else delete fresh.studyMonthlyGoals[currentYm];
+      }));
+      goalsPanel.appendChild(editor);
+    }
+
     rows.forEach(item=>{
       const goal=Number(goals[item.ym])||0;
       const row=document.createElement("div");
@@ -1905,23 +1916,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       total.className="study-month-total";
       total.textContent=fmtMin(item.total);
       row.append(label,total);
-      if(goal>0){
-        row.appendChild(progressBar(item.total,goal,label.textContent+"の目標達成率"));
-      }
-      const editor=goalEditor("この月の目標",goal,value=>saveGoals(fresh=>{
-        if(value>0)fresh.studyMonthlyGoals[item.ym]=value;
-        else delete fresh.studyMonthlyGoals[item.ym];
-      }));
-      editor.classList.add("study-goal-month");
-      if(goalsPanel){
-        const goalRow=document.createElement("div");
-        goalRow.className="study-month-row";
-        const goalLabel=document.createElement("span");
-        goalLabel.className="study-month-label";
-        goalLabel.textContent=item.year+"年"+item.month+"月";
-        goalRow.append(goalLabel,editor);
-        goalsPanel.appendChild(goalRow);
-      }
+      // 月別の棒は各月の実績を比較する。目標未設定の過去月も表示する。
+      const track=document.createElement("div");
+      track.className="study-month-progress";
+      track.setAttribute("role","img");
+      track.setAttribute("aria-label",label.textContent+" "+fmtMin(item.total)+"、表示中の最大月との比較");
+      const fill=document.createElement("div");
+      fill.className="study-month-progress-fill";
+      fill.style.width=(Math.max(0,item.total)/maxMonth*100)+"%";
+      track.appendChild(fill);
+      row.appendChild(track);
       studyMonthHistoryEl.appendChild(row);
     });
   }
