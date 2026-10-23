@@ -90,6 +90,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .study-subject-bar-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px}
 .study-subject-bar-name{font-weight:750;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .study-subject-bar-time{font-weight:750;color:var(--muted);white-space:nowrap}
+.study-subject-bar-scale{font-size:10px;color:var(--muted);margin-top:-1px}
 .study-subject-bar-track{width:100%;height:10px;border-radius:999px;background:#eef0f4;overflow:hidden}
 .study-subject-bar-fill{height:100%;border-radius:999px;min-width:0;transition:width .2s ease}
 @media(max-width:520px){
@@ -554,7 +555,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.34</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.35</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -1840,13 +1841,20 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
           const fill=document.createElement("div");
           fill.className="study-subject-bar-fill";
-          const percent=item.total>0?Math.max(2,Math.min(100,entry.seconds/item.total*100)):0;
+          const daysInMonth=new Date(item.year,item.month,0).getDate();
+          const monthCapacitySec=daysInMonth*24*3600;
+          const rawPercent=monthCapacitySec>0?entry.seconds/monthCapacitySec*100:0;
+          const percent=entry.seconds>0?Math.max(1,Math.min(100,rawPercent)):0;
           fill.style.width=percent+"%";
           fill.style.background=entry.color;
 
+          const scale=document.createElement("div");
+          scale.className="study-subject-bar-scale";
+          scale.textContent="月の全"+(daysInMonth*24)+"時間のうち "+rawPercent.toFixed(1)+"%";
+
           track.appendChild(fill);
           head.append(name,time);
-          barRow.append(head,track);
+          barRow.append(head,track,scale);
           breakdown.appendChild(barRow);
         });
 
@@ -2697,7 +2705,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const monthValue=selectedHealthReportMonth();
     const url=new URL("report.html",window.location.href);
     url.searchParams.set("month",monthValue);
-    url.searchParams.set("v","17.34");
+    url.searchParams.set("v","17.35");
     const opened=window.open(url.toString(),"_blank");
     if(!opened){
       window.location.href=url.toString();
