@@ -301,12 +301,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .cal-health{font-size:8px;line-height:1.2;margin-top:3px;text-align:center;color:var(--text)}
 .period-mark{font-size:8px;font-weight:750;margin-top:2px}
 .custom-activity-list{display:flex;flex-direction:column;gap:7px}
-.custom-activity-item{display:flex;align-items:center;gap:8px;border:1px solid #e0e4ea;border-radius:12px;padding:8px 10px;background:#fff}
+.custom-activity-item{display:flex;align-items:center;gap:8px;border:1px solid #e0e4ea;border-radius:12px;padding:8px 10px;background:#fff;flex-wrap:wrap}
 .custom-activity-dot{width:11px;height:11px;border-radius:50%;flex:0 0 11px}
 .custom-activity-name{font-size:13px;font-weight:750;flex:1;min-width:0;word-break:break-word}
 .custom-activity-order{display:flex;gap:4px}
 .custom-activity-move{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:0!important;font-size:15px!important}
 .custom-activity-move:disabled{opacity:.28}
+.custom-activity-rename{width:auto!important;min-width:64px!important;height:34px!important;min-height:34px!important;padding:0 10px!important;font-size:11px!important}
 .custom-activity-delete{width:auto!important;min-width:56px!important;height:34px!important;min-height:34px!important;padding:0 10px!important;font-size:11px!important;color:#b42318!important}
 .life-title{font-size:19px;font-weight:750;margin:0 0 6px}
 .life-controls{display:flex;flex-direction:column;gap:12px;margin-top:14px}
@@ -469,7 +470,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.24</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.25</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -497,7 +498,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       </div>
 
       <details class="manual-entry custom-activity-entry">
-        <summary>＋ 活動を追加</summary>
+        <summary>＋ 活動を追加・並び替え</summary>
         <div class="manual-body">
           <div class="life-field">
             <label for="customActivityName">活動名</label>
@@ -505,7 +506,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
           </div>
           <button class="secondary" id="addCustomActivity" type="button">活動を追加</button>
           <div class="custom-activity-list" id="customActivityList"></div>
-          <div class="small">追加した活動は↑↓で並び替えできます。「その他」は常に一番下に表示されます。</div>
+          <div class="small">睡眠・食事・休憩・お出かけ・追加した活動は、↑↓で並び替え・名前変更できます。「その他」は常に一番下です。</div>
         </div>
       </details>
 
@@ -930,6 +931,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       deletedActivitySessionIds:[],
       customActivityCategories:[],
       customActivityCategoriesUpdatedAt:0,
+      activityOrder:["sleep","meal","break","outing"],
+      activityLabelOverrides:{},
+      activitySettingsUpdatedAt:0,
       activityRunning:null,
       running:false,
       startedAt:null,
@@ -1026,6 +1030,25 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       merged.customActivityCategoriesUpdatedAt=0;
     }
 
+    const localSettingsTs=Number(local.activitySettingsUpdatedAt||0);
+    const remoteSettingsTs=Number(remote.activitySettingsUpdatedAt||0);
+    if(localSettingsTs||remoteSettingsTs){
+      const settingsSource=localSettingsTs>=remoteSettingsTs?local:remote;
+      merged.activityOrder=Array.isArray(settingsSource.activityOrder)?[...settingsSource.activityOrder]:[];
+      merged.activityLabelOverrides=(settingsSource.activityLabelOverrides&&typeof settingsSource.activityLabelOverrides==="object")
+        ?{...settingsSource.activityLabelOverrides}:{};
+      merged.activitySettingsUpdatedAt=Math.max(localSettingsTs,remoteSettingsTs);
+    }else{
+      merged.activityOrder=Array.isArray(local.activityOrder)&&local.activityOrder.length
+        ?[...local.activityOrder]
+        :(Array.isArray(remote.activityOrder)?[...remote.activityOrder]:["sleep","meal","break","outing"]);
+      merged.activityLabelOverrides={
+        ...(remote.activityLabelOverrides||{}),
+        ...(local.activityLabelOverrides||{})
+      };
+      merged.activitySettingsUpdatedAt=0;
+    }
+
     if(local.running){
       merged.running=true;
       merged.startedAt=local.startedAt;
@@ -1104,6 +1127,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     if(!Array.isArray(d.deletedActivitySessionIds)) d.deletedActivitySessionIds=[];
     if(!Array.isArray(d.customActivityCategories)) d.customActivityCategories=[];
     if(!Number.isFinite(Number(d.customActivityCategoriesUpdatedAt))) d.customActivityCategoriesUpdatedAt=0;
+    if(!Array.isArray(d.activityOrder)) d.activityOrder=["sleep","meal","break","outing"];
+    if(!d.activityLabelOverrides || typeof d.activityLabelOverrides!=="object") d.activityLabelOverrides={};
+    if(!Number.isFinite(Number(d.activitySettingsUpdatedAt))) d.activitySettingsUpdatedAt=0;
     if(d.deletedActivitySessionIds.length){
       const deleted=new Set(d.deletedActivitySessionIds);
       d.activitySessions=d.activitySessions.filter(x=>x&&x.id&&!deleted.has(x.id));
@@ -1403,14 +1429,27 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   const CUSTOM_ACTIVITY_COLORS=["#e56b6f","#118ab2","#8f6fd1","#2a9d8f","#e9a03b","#5c7cfa","#c26dbc","#6c8c4d"];
 
   function activityMeta(data,category){
-    if(ACTIVITY_META[category]) return ACTIVITY_META[category];
+    if(category==="other") return ACTIVITY_META.other;
+    if(ACTIVITY_META[category]){
+      const override=(data.activityLabelOverrides||{})[category];
+      return {...ACTIVITY_META[category],label:override||ACTIVITY_META[category].label};
+    }
     const custom=(data.customActivityCategories||[]).find(x=>x&&x.id===category);
     if(custom) return {label:custom.label,color:custom.color||"#667085"};
     return {label:"その他",color:"#9aa1ad"};
   }
 
+  function editableActivityKeys(data){
+    const base=["sleep","meal","break","outing"];
+    const custom=(data.customActivityCategories||[]).map(x=>x.id);
+    const available=new Set([...base,...custom]);
+    const saved=Array.isArray(data.activityOrder)?data.activityOrder.filter(k=>available.has(k)):[];
+    const missing=[...available].filter(k=>!saved.includes(k));
+    return [...saved,...missing];
+  }
+
   function selectableActivityKeys(data){
-    return ["sleep","meal","break","outing",...(data.customActivityCategories||[]).map(x=>x.id),"other"];
+    return [...editableActivityKeys(data),"other"];
   }
 
   function renderLifeCategoryOptions(data){
@@ -1429,23 +1468,22 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
   function renderCustomActivityList(data){
     customActivityListEl.innerHTML="";
-    const items=data.customActivityCategories||[];
-    if(!items.length){
-      const empty=document.createElement("div");
-      empty.className="small";
-      empty.textContent="追加した活動はありません。";
-      customActivityListEl.appendChild(empty);
-      return;
-    }
-    items.forEach((item,index)=>{
+    const keys=editableActivityKeys(data);
+
+    keys.forEach((key,index)=>{
+      const meta=activityMeta(data,key);
+      const isCustom=key.startsWith("custom-");
+
       const row=document.createElement("div");
       row.className="custom-activity-item";
+
       const dot=document.createElement("span");
       dot.className="custom-activity-dot";
-      dot.style.background=item.color||"#667085";
+      dot.style.background=meta.color||"#667085";
+
       const name=document.createElement("span");
       name.className="custom-activity-name";
-      name.textContent=item.label;
+      name.textContent=meta.label;
 
       const order=document.createElement("div");
       order.className="custom-activity-order";
@@ -1456,7 +1494,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       up.textContent="↑";
       up.title="上へ";
       up.disabled=index===0;
-      up.dataset.customActivityMove=item.id;
+      up.dataset.activityMove=key;
       up.dataset.direction="-1";
 
       const down=document.createElement("button");
@@ -1464,21 +1502,93 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       down.className="secondary custom-activity-move";
       down.textContent="↓";
       down.title="下へ";
-      down.disabled=index===items.length-1;
-      down.dataset.customActivityMove=item.id;
+      down.disabled=index===keys.length-1;
+      down.dataset.activityMove=key;
       down.dataset.direction="1";
 
       order.append(up,down);
 
-      const del=document.createElement("button");
-      del.type="button";
-      del.className="secondary custom-activity-delete";
-      del.textContent="削除";
-      del.dataset.customActivityDelete=item.id;
+      const rename=document.createElement("button");
+      rename.type="button";
+      rename.className="secondary custom-activity-rename";
+      rename.textContent="名前変更";
+      rename.dataset.activityRename=key;
 
-      row.append(dot,name,order,del);
+      row.append(dot,name,order,rename);
+
+      if(isCustom){
+        const del=document.createElement("button");
+        del.type="button";
+        del.className="secondary custom-activity-delete";
+        del.textContent="削除";
+        del.dataset.customActivityDelete=key;
+        row.appendChild(del);
+      }
+
       customActivityListEl.appendChild(row);
     });
+
+    const other=document.createElement("div");
+    other.className="custom-activity-item";
+    const otherDot=document.createElement("span");
+    otherDot.className="custom-activity-dot";
+    otherDot.style.background=ACTIVITY_META.other.color;
+    const otherName=document.createElement("span");
+    otherName.className="custom-activity-name";
+    otherName.textContent="その他";
+    const fixed=document.createElement("span");
+    fixed.className="small";
+    fixed.textContent="最下部に固定";
+    other.append(otherDot,otherName,fixed);
+    customActivityListEl.appendChild(other);
+  }
+
+  function moveActivityCategory(id,direction){
+    const data=load();
+    const keys=editableActivityKeys(data);
+    const index=keys.indexOf(id);
+    const nextIndex=index+Number(direction||0);
+    if(index<0||nextIndex<0||nextIndex>=keys.length) return;
+    const [item]=keys.splice(index,1);
+    keys.splice(nextIndex,0,item);
+    data.activityOrder=keys;
+    data.activitySettingsUpdatedAt=Date.now();
+    save(data);
+    render();
+    lifeMsgEl.textContent="活動の順番を変更しました。";
+  }
+
+  function renameActivityCategory(id){
+    const data=load();
+    const current=activityMeta(data,id).label;
+    const next=window.prompt("活動名を変更",current);
+    if(next===null) return;
+    const label=String(next).trim().replace(/\s+/g," ").slice(0,20);
+    if(!label){
+      lifeMsgEl.textContent="活動名を入力してください。";
+      return;
+    }
+    const duplicate=selectableActivityKeys(data).some(k=>k!==id&&activityMeta(data,k).label===label);
+    if(duplicate){
+      lifeMsgEl.textContent="同じ名前の活動がすでにあります。";
+      return;
+    }
+
+    if(id.startsWith("custom-")){
+      const item=(data.customActivityCategories||[]).find(x=>x&&x.id===id);
+      if(!item) return;
+      item.label=label;
+      data.customActivityCategoriesUpdatedAt=Date.now();
+    }else{
+      data.activityLabelOverrides=data.activityLabelOverrides||{};
+      if(label===ACTIVITY_META[id].label) delete data.activityLabelOverrides[id];
+      else data.activityLabelOverrides[id]=label;
+      data.activitySettingsUpdatedAt=Date.now();
+    }
+
+    save(data);
+    render();
+    lifeMsgEl.textContent="「"+current+"」を「"+label+"」に変更しました。";
   }
 
   function addCustomActivity(){
@@ -1499,26 +1609,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const color=CUSTOM_ACTIVITY_COLORS[items.length%CUSTOM_ACTIVITY_COLORS.length];
     data.customActivityCategories=[...items,{id,label:label.slice(0,20),color,createdAt:Date.now()}];
     data.customActivityCategoriesUpdatedAt=Date.now();
+    data.activityOrder=[...editableActivityKeys(data).filter(k=>k!==id),id];
+    data.activitySettingsUpdatedAt=Date.now();
     save(data);
     customActivityNameEl.value="";
     render();
     lifeCategoryEl.value=id;
     lifeMsgEl.textContent="「"+label+"」を活動に追加しました。";
-  }
-
-  function moveCustomActivity(id,direction){
-    const data=load();
-    const items=[...(data.customActivityCategories||[])];
-    const index=items.findIndex(x=>x&&x.id===id);
-    const nextIndex=index+Number(direction||0);
-    if(index<0||nextIndex<0||nextIndex>=items.length) return;
-    const [item]=items.splice(index,1);
-    items.splice(nextIndex,0,item);
-    data.customActivityCategories=items;
-    data.customActivityCategoriesUpdatedAt=Date.now();
-    save(data);
-    render();
-    lifeMsgEl.textContent="活動の順番を変更しました。";
   }
 
   function deleteCustomActivity(id){
@@ -1533,6 +1630,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     }
     data.customActivityCategories=(data.customActivityCategories||[]).filter(x=>x&&x.id!==id);
     data.customActivityCategoriesUpdatedAt=Date.now();
+    data.activityOrder=editableActivityKeys(data).filter(k=>k!==id);
+    data.activitySettingsUpdatedAt=Date.now();
     save(data);
     render();
     lifeMsgEl.textContent="「"+item.label+"」を活動一覧から削除しました。";
@@ -2030,7 +2129,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const monthValue=selectedHealthReportMonth();
     const url=new URL("report.html",window.location.href);
     url.searchParams.set("month",monthValue);
-    url.searchParams.set("v","17.24");
+    url.searchParams.set("v","17.25");
     const opened=window.open(url.toString(),"_blank");
     if(!opened){
       window.location.href=url.toString();
@@ -2531,6 +2630,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       activitySessions:[...(data.activitySessions||[])],
       customActivityCategories:[...(data.customActivityCategories||[])],
       customActivityCategoriesUpdatedAt:Number(data.customActivityCategoriesUpdatedAt||0),
+      activityOrder:[...(data.activityOrder||[])],
+      activityLabelOverrides:{...(data.activityLabelOverrides||{})},
+      activitySettingsUpdatedAt:Number(data.activitySettingsUpdatedAt||0),
       activityRunning:data.activityRunning||null
     };
   }
@@ -2610,6 +2712,13 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
             if(x&&x.id&&x.label&&!existingCustom.has(x.id)) data.customActivityCategories.push(x);
           });
         }
+      }
+      if(Number(parsed.activitySettingsUpdatedAt||0)>=Number(data.activitySettingsUpdatedAt||0)){
+        if(Array.isArray(parsed.activityOrder)) data.activityOrder=[...parsed.activityOrder];
+        if(parsed.activityLabelOverrides&&typeof parsed.activityLabelOverrides==="object"){
+          data.activityLabelOverrides={...parsed.activityLabelOverrides};
+        }
+        data.activitySettingsUpdatedAt=Number(parsed.activitySettingsUpdatedAt||Date.now());
       }
       save(data);
       backupMsg.textContent="バックアップを復元しました。";
@@ -2824,9 +2933,14 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     if(e.key==="Enter"){ e.preventDefault(); addCustomActivity(); }
   });
   customActivityListEl.addEventListener("click",e=>{
-    const move=e.target.closest("[data-custom-activity-move]");
+    const move=e.target.closest("[data-activity-move]");
     if(move){
-      moveCustomActivity(move.dataset.customActivityMove,move.dataset.direction);
+      moveActivityCategory(move.dataset.activityMove,move.dataset.direction);
+      return;
+    }
+    const rename=e.target.closest("[data-activity-rename]");
+    if(rename){
+      renameActivityCategory(rename.dataset.activityRename);
       return;
     }
     const del=e.target.closest("[data-custom-activity-delete]");
