@@ -262,22 +262,13 @@ th:nth-child(6),td:nth-child(6){width:23%}
       const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4",compress:true});
       const margin=8,pageWidth=297,pageHeight=210;
       const contentWidth=pageWidth-margin*2,contentHeight=pageHeight-margin*2;
-      const pxPerMm=canvas.width/contentWidth;
-      const pagePx=Math.max(1,Math.floor(contentHeight*pxPerMm));
-      let y=0,page=0;
-
-      while(y<canvas.height){
-        const h=Math.min(pagePx,canvas.height-y);
-        const part=document.createElement("canvas");
-        part.width=canvas.width;part.height=h;
-        const ctx=part.getContext("2d");
-        ctx.fillStyle="#fff";ctx.fillRect(0,0,part.width,part.height);
-        ctx.drawImage(canvas,0,y,canvas.width,h,0,0,canvas.width,h);
-        const img=part.toDataURL("image/jpeg",0.92);
-        if(page>0) pdf.addPage();
-        pdf.addImage(img,"JPEG",margin,margin,contentWidth,h/pxPerMm,"","FAST");
-        y+=h;page++;
-      }
+      const scale=Math.min(contentWidth/canvas.width,contentHeight/canvas.height);
+      const imgWidth=canvas.width*scale;
+      const imgHeight=canvas.height*scale;
+      const x=(pageWidth-imgWidth)/2;
+      const y=margin;
+      const img=canvas.toDataURL("image/jpeg",0.94);
+      pdf.addImage(img,"JPEG",x,y,imgWidth,imgHeight,"","FAST");
 
       const blob=pdf.output("blob");
       const filename="体調管理_"+year+"年"+String(month).padStart(2,"0")+"月.pdf";
