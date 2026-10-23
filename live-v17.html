@@ -480,7 +480,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.27</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.28</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -2078,7 +2078,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   function renderLife(data){
     const date=selectedLifeDate();
     renderLifeCategoryOptions(data);
-    renderCustomActivityList(data);
+    if(customActivityDetailsEl.classList.contains("is-hidden")){
+      renderCustomActivityList(data);
+    }
 
     const selectable=selectableActivityKeys(data);
     const vals={study:studySecondsForLifeDate(data,date)};
@@ -2222,7 +2224,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const monthValue=selectedHealthReportMonth();
     const url=new URL("report.html",window.location.href);
     url.searchParams.set("month",monthValue);
-    url.searchParams.set("v","17.27");
+    url.searchParams.set("v","17.28");
     const opened=window.open(url.toString(),"_blank");
     if(!opened){
       window.location.href=url.toString();
