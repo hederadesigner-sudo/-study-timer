@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="勉強タイマー">
-<meta name="app-build" content="2026-10-24-root-live-v17-39">
+<meta name="app-build" content="2026-10-24-root-live-v17-40">
 <title>勉強タイマー</title>
 <script>
 window.addEventListener("pageshow",function(e){
@@ -81,6 +81,14 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .study-subject-delete{color:#b42318!important}
 .study-month-history-entry{margin-top:12px}
 .study-month-history{display:flex;flex-direction:column;gap:7px}
+.study-goal-editor{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 2px}
+.study-goal-label{font-size:12px;font-weight:750;color:var(--muted)}
+.study-goal-controls{display:flex;align-items:center;gap:7px}
+.study-goal-controls input{width:95px;height:38px;border:1px solid var(--line);border-radius:9px;padding:7px;font-size:16px;background:#fff;color:var(--text)}
+.study-goal-controls span{font-size:12px;color:var(--muted)}
+.study-goal-save{border:0;border-radius:9px;background:var(--accent);color:white;padding:9px 13px;font-size:12px;font-weight:750;min-height:38px}
+.study-goal-month{margin:0 0 10px}
+
 .study-growth-summary{padding:16px;border-radius:16px;background:linear-gradient(135deg,#eeecff,#f8f9ff);margin-bottom:14px}
 .study-growth-kicker{font-size:12px;font-weight:800;color:#6259a7}
 .study-growth-number{font-size:27px;font-weight:850;margin-top:4px;font-variant-numeric:tabular-nums}
@@ -559,7 +567,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.39</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.40</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -1792,7 +1800,6 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   function renderStudyMonthHistory(data,live){
     studyMonthHistoryEl.innerHTML="";
     const months=new Set();
-
     Object.keys(data.days||{}).forEach(k=>{
       if(/^\d{4}-\d{2}-\d{2}$/.test(k)) months.add(k.slice(0,7));
     });
@@ -1800,42 +1807,88 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       if(/^\d{4}-\d{2}-\d{2}$/.test(k)) months.add(k.slice(0,7));
     });
     if(data.runningDate) months.add(data.runningDate.slice(0,7));
-
+    const now=new Date();
+    const currentYm=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+    months.add(currentYm);
     const rows=[...months].map(ym=>{
       const [year,month]=ym.split("-").map(Number);
       const info=studySubjectBreakdownForMonth(data,year,month,live);
       return {ym,year,month,...info};
-    }).filter(x=>x.total>0).sort((a,b)=>b.ym.localeCompare(a.ym));
+    }).filter(x=>x.total>0||x.ym===currentYm||(data.studyMonthlyGoals&&Number(data.studyMonthlyGoals[x.ym])>0))
+      .sort((a,b)=>b.ym.localeCompare(a.ym));
+    const goals=data.studyMonthlyGoals&&typeof data.studyMonthlyGoals==="object"?data.studyMonthlyGoals:{};
+    const overallGoal=Number(data.studyOverallGoalHours)||0;
+    const cumulative=rows.reduce((sum,item)=>sum+Math.max(0,item.total),0);
 
-    if(!rows.length){
-      studyMonthHistoryEl.innerHTML='<div class="small">まだ月別記録はありません。</div>';
-      return;
+    function goalEditor(label,hours,onSave){
+      const wrapper=document.createElement("div");
+      wrapper.className="study-goal-editor";
+      const title=document.createElement("span");
+      title.className="study-goal-label";
+      title.textContent=label;
+      const control=document.createElement("div");
+      control.className="study-goal-controls";
+      const input=document.createElement("input");
+      input.type="number";input.min="0";input.step="0.5";input.inputMode="decimal";
+      input.placeholder="未設定";input.value=hours>0?String(hours):"";
+      input.setAttribute("aria-label",label+"（時間）");
+      const unit=document.createElement("span");unit.textContent="時間";
+      const button=document.createElement("button");
+      button.type="button";button.className="study-goal-save";button.textContent="保存";
+      button.addEventListener("click",()=>{
+        const val=input.value.trim()===""?0:Number(input.value);
+        if(!Number.isFinite(val)||val<0||val>100000){
+          alert("0〜100000の時間を入力してください。");return;
+        }
+        onSave(val);
+      });
+      control.append(input,unit,button);
+      wrapper.append(title,control);
+      return wrapper;
+    }
+    function saveGoals(update){
+      const fresh=load();
+      if(!fresh.studyMonthlyGoals||typeof fresh.studyMonthlyGoals!=="object")fresh.studyMonthlyGoals={};
+      update(fresh);
+      save(fresh);
+      renderStudyMonthHistory(fresh,fresh.running&&fresh.startedAt?Math.max(0,(Date.now()-fresh.startedAt)/1000):0);
+    }
+    function progressBar(value,goal,label){
+      const progress=document.createElement("div");
+      progress.className="study-month-progress";
+      progress.setAttribute("role","progressbar");
+      progress.setAttribute("aria-label",label);
+      progress.setAttribute("aria-valuemin","0");
+      progress.setAttribute("aria-valuemax","100");
+      const pct=goal>0?value/(goal*3600)*100:0;
+      progress.setAttribute("aria-valuenow",String(Math.round(Math.min(100,pct))));
+      const fill=document.createElement("div");
+      fill.className="study-month-progress-fill";
+      fill.style.width=Math.min(100,Math.max(0,pct))+"%";
+      progress.appendChild(fill);
+      return progress;
     }
 
-    // 24時間を分母にせず、生活と休養を確保した「1日2時間」を比較用の目安にする。
-    // この目安は評価やノルマではなく、達成してもそれ以上でも前向きに表示する。
-    const dailyReferenceSeconds=2*60*60;
-    const referenceForMonth=item=>new Date(item.year,item.month,0).getDate()*dailyReferenceSeconds;
-    const latest=rows[0];
-    const latestReference=referenceForMonth(latest);
-    const latestPercent=latestReference>0?latest.total/latestReference*100:0;
     const summary=document.createElement("div");
     summary.className="study-growth-summary";
     const kicker=document.createElement("div");
     kicker.className="study-growth-kicker";
-    kicker.textContent="自分のペースで積み重ねた時間";
+    kicker.textContent="累計勉強時間";
     const big=document.createElement("div");
     big.className="study-growth-number";
-    big.textContent=fmtMin(latest.total);
-    const sub=document.createElement("div");
-    sub.className="study-growth-subtitle";
-    sub.textContent="今月の達成率 "+latestPercent.toFixed(1)+"%";
-    summary.append(kicker,big,sub);
+    big.textContent=fmtMin(cumulative);
+    summary.append(kicker,big);
+    if(overallGoal>0){
+      const sub=document.createElement("div");
+      sub.className="study-growth-subtitle";
+      sub.textContent="目標 "+overallGoal+"時間 ・ "+(cumulative/(overallGoal*3600)*100).toFixed(1)+"%";
+      summary.append(sub,progressBar(cumulative,overallGoal,"累計目標の達成率"));
+    }
+    summary.appendChild(goalEditor("累計目標を設定",overallGoal,value=>saveGoals(fresh=>{fresh.studyOverallGoalHours=value;})));
     studyMonthHistoryEl.appendChild(summary);
 
     rows.forEach(item=>{
-      const reference=referenceForMonth(item);
-      const percent=reference>0?item.total/reference*100:0;
+      const goal=Number(goals[item.ym])||0;
       const row=document.createElement("div");
       row.className="study-month-row";
       const label=document.createElement("span");
@@ -1845,24 +1898,19 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       total.className="study-month-total";
       total.textContent=fmtMin(item.total);
       row.append(label,total);
-
-      const progress=document.createElement("div");
-      progress.className="study-month-progress";
-      progress.setAttribute("role","progressbar");
-      progress.setAttribute("aria-label",item.year+"年"+item.month+"月の勉強時間の目安に対する割合");
-      progress.setAttribute("aria-valuemin","0");
-      progress.setAttribute("aria-valuemax","100");
-      progress.setAttribute("aria-valuenow",String(Math.round(Math.min(100,percent))));
-      const fill=document.createElement("div");
-      fill.className="study-month-progress-fill";
-      fill.style.width=Math.min(100,Math.max(0,percent))+"%";
-      progress.appendChild(fill);
-      row.appendChild(progress);
-
-      const detail=document.createElement("div");
-      detail.className="study-month-record-gap";
-      detail.textContent="達成率 "+percent.toFixed(1)+"%";
-      row.appendChild(detail);
+      if(goal>0){
+        row.appendChild(progressBar(item.total,goal,label.textContent+"の目標達成率"));
+        const pct=document.createElement("div");
+        pct.className="study-month-record-gap";
+        pct.textContent="目標 "+goal+"時間 ・ 達成率 "+(item.total/(goal*3600)*100).toFixed(1)+"%";
+        row.appendChild(pct);
+      }
+      const editor=goalEditor("この月の目標",goal,value=>saveGoals(fresh=>{
+        if(value>0)fresh.studyMonthlyGoals[item.ym]=value;
+        else delete fresh.studyMonthlyGoals[item.ym];
+      }));
+      editor.classList.add("study-goal-month");
+      row.appendChild(editor);
       studyMonthHistoryEl.appendChild(row);
     });
   }
