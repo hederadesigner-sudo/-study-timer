@@ -251,7 +251,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .clock-time{fill:var(--text);font-size:26px;font-weight:800;text-anchor:middle;dominant-baseline:middle;font-variant-numeric:tabular-nums}
 .clock-date{fill:var(--text);font-size:14px;font-weight:800;text-anchor:middle}
 .clock-date-sub{fill:var(--muted);font-size:11px;font-weight:700;text-anchor:middle}
-.clock-hour{fill:var(--muted);font-size:10px;font-weight:650;text-anchor:middle;dominant-baseline:middle}
+.clock-hour{fill:var(--muted);font-size:14px;font-weight:750;text-anchor:middle;dominant-baseline:middle}
 .clock-tick{stroke:#cfd4dd;stroke-width:1.5}
 .clock-tick.major{stroke:#aeb6c3;stroke-width:2}
 .clock-segment-label{fill:#fff;font-size:9px;font-weight:800;text-anchor:middle;dominant-baseline:middle;paint-order:stroke;stroke:rgba(0,0,0,.14);stroke-width:2px}
@@ -367,7 +367,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.2</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.3</span></div>
     <div class="small">勉強・睡眠・食事・休憩・お出かけ・その他を記録します。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -1405,7 +1405,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       const major=h%3===0;
       const inner=clockPoint(cx,cy,r+31,minute);
       const outer=clockPoint(cx,cy,r+(major?40:36),minute);
-      const label=clockPoint(cx,cy,r+51,minute);
+      const label=clockPoint(cx,cy,r+55,minute);
       svg.push('<line class="clock-tick'+(major?' major':'')+'" x1="'+inner.x.toFixed(2)+'" y1="'+inner.y.toFixed(2)+'" x2="'+outer.x.toFixed(2)+'" y2="'+outer.y.toFixed(2)+'"></line>');
       svg.push('<text class="clock-hour" x="'+label.x.toFixed(2)+'" y="'+label.y.toFixed(2)+'">'+h+'</text>');
     }
