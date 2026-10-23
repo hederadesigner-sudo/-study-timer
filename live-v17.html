@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="勉強タイマー">
-<meta name="app-build" content="2026-10-24-root-live-v17-45">
+<meta name="app-build" content="2026-10-24-root-live-v17-46">
 <title>勉強タイマー</title>
 <script>
 window.addEventListener("pageshow",function(e){
@@ -109,6 +109,9 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 .study-month-best{font-size:10px;font-weight:850;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:4px 8px;white-space:nowrap}
 .study-month-progress{grid-column:1/-1;width:100%;height:12px;border-radius:999px;background:#eef0f4;overflow:hidden;margin:2px 0 5px}
 .study-month-progress-fill{height:100%;border-radius:999px;background:var(--accent);transition:width .2s ease}
+.study-month-threshold{position:absolute;top:-5px;height:22px;border-left:2px solid #172033;transform:translateX(-1px);z-index:2;pointer-events:none}
+.study-month-baseline-caption{grid-column:1/-1;font-size:11px;font-weight:650;color:var(--muted);margin:-1px 0 7px}
+
 @media(max-width:520px){
   .study-subject-item{gap:6px}
 }
@@ -576,7 +579,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.45</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.46</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -1926,6 +1929,8 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
       const track=document.createElement("div");
       track.className="study-month-progress";
       track.style.display="flex";
+      track.style.position="relative";
+      track.style.overflow="visible";
       track.setAttribute("role","img");
       track.setAttribute("aria-label",label.textContent+" "+fmtMin(item.total)+"、月20時間を超えた部分は赤色");
       const purple=document.createElement("div");
@@ -1943,7 +1948,16 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
         red.style.flexShrink="0";
         track.appendChild(red);
       }
+      const threshold=document.createElement("span");
+      threshold.className="study-month-threshold";
+      threshold.style.left=(baselineSeconds/scaleSeconds*100)+"%";
+      threshold.setAttribute("aria-hidden","true");
+      track.appendChild(threshold);
+      const caption=document.createElement("div");
+      caption.className="study-month-baseline-caption";
+      caption.textContent=item.total>baselineSeconds?"20時間超え ＋"+fmtMin(item.total-baselineSeconds):"基準線：20時間";
       row.appendChild(track);
+      row.appendChild(caption);
       studyMonthHistoryEl.appendChild(row);
     });
   }
