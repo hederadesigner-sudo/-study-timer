@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="勉強タイマー">
-<meta name="app-build" content="2026-10-24-root-live-v17-46">
+<meta name="app-build" content="2026-10-24-root-live-v17-47">
 <title>勉強タイマー</title>
 <script>
 window.addEventListener("pageshow",function(e){
@@ -579,7 +579,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
   </div>
 
   <div class="card" id="lifeCard">
-    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.46</span></div>
+    <div class="life-title">1日の生活時間 <span id="buildMarker" style="font-size:10px;color:var(--muted);font-weight:600">v17.47</span></div>
     <div class="small">睡眠・食事・休憩・お出かけなどを記録します。活動は自分で追加できます。24時間の円グラフで、何時に何をしていたかを確認できます。</div>
 
     <div class="life-controls">
@@ -2523,6 +2523,42 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     return total;
   }
 
+  // 睡眠の合計は起床日で集計。日付をまたいで分割保存された区間を再結合する。
+  // 24時間円グラフ用の activitySecondsForDate は変更しない。
+  function sleepSecondsForWakeDate(data,date){
+    const segments=(data.activitySessions||[])
+      .filter(x=>x&&x.category==="sleep")
+      .map(x=>({start:Number(x.start),end:Number(x.end)}))
+      .filter(x=>Number.isFinite(x.start)&&Number.isFinite(x.end)&&x.end>x.start)
+      .sort((a,b)=>a.start-b.start);
+    const episodes=[];
+    segments.forEach(segment=>{
+      const last=episodes[episodes.length-1];
+      if(last&&segment.start<=last.end+1000){
+        last.end=Math.max(last.end,segment.end);
+      }else{
+        episodes.push({...segment});
+      }
+    });
+    let total=0;
+    episodes.forEach(ep=>{
+      // 起床時刻（終了時刻）の属する日に一括計上する。
+      if(dateKey(new Date(ep.end-1))===date){
+        total+=(ep.end-ep.start)/1000;
+      }
+    });
+    const running=data.activityRunning;
+    if(running&&running.category==="sleep"&&running.startedAt&&date===dateKey()){
+      const started=Number(running.startedAt);
+      if(Number.isFinite(started)&&started<Date.now()){
+        // 継続計測中は現時点までを表示。既存区間と重複する場合は重複分を除く。
+        const covered=episodes.reduce((sum,ep)=>sum+Math.max(0,Math.min(Date.now(),ep.end)-Math.max(started,ep.start)),0);
+        total+=Math.max(0,(Date.now()-started-covered)/1000);
+      }
+    }
+    return total;
+  }
+
   function studySecondsForLifeDate(data,date){
     let sec=Number(data.days[date]||0);
     if(data.running&&data.runningDate===date) sec+=currentLiveSeconds(data);
@@ -2666,7 +2702,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
     const known=Object.values(vals).reduce((a,b)=>a+b,0);
     vals.untracked=Math.max(0,86400-known);
 
-    sleepTotalEl.textContent="睡眠 合計："+fmtMin(vals.sleep||0);
+    sleepTotalEl.textContent="睡眠 合計："+fmtMin(sleepSecondsForWakeDate(data,date));
     renderLifeSessionEditor(data,date);
 
     if(date===dateKey()){
@@ -2745,7 +2781,7 @@ h1{font-size:25px;margin:0 0 4px}.small{font-size:13px;color:var(--muted);line-h
 
   function updateHealthSleepTotal(data,date){
     if(!healthSleepTotalEl) return;
-    const sec=activitySecondsForDate(data,date,"sleep");
+    const sec=sleepSecondsForWakeDate(data,date);
     healthSleepTotalEl.textContent=fmtMin(sec);
   }
 
